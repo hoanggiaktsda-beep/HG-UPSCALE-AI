@@ -1,0 +1,30 @@
+name: Upscale safety checks
+on:
+  pull_request:
+  push:
+    branches: [main]
+jobs:
+  safety:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Check inline JavaScript syntax and safety guards
+        run: |
+          node --input-type=module <<'NODE'
+          import fs from 'node:fs';
+          import vm from 'node:vm';
+          import assert from 'node:assert/strict';
+          const html=fs.readFileSync('index.html','utf8');
+          const js=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
+          assert(js.length,'Inline script missing');
+          for(const s of js)new vm.Script(s);
+          assert(html.includes('if(needsDetail&&px>limit)'), 'Memory preflight missing');
+          assert(html.includes("canvas.width=0;canvas.height=0"), 'Stale result reset missing');
+          assert(html.includes('URL.revokeObjectURL(previewUrl)'), 'Preview cleanup missing');
+          assert(html.includes("b.dataset.tab!=='up'"),'Upscale tab must remain independent');
+          assert(html.includes("b.dataset.tab!=='tools'"),'Utilities tab must remain independent');
+          console.log('Upscale safety checks passed');
+          NODE
