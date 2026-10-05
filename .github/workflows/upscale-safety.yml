@@ -21,7 +21,8 @@ jobs:
           const js=[...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(x=>x[1]);
           assert(js.length,'Inline script missing');
           for(const s of js)new vm.Script(s);
-          assert(html.includes('if(needsDetail&&px>limit)'), 'Memory preflight missing');
+          assert(html.includes('if(px>limit)'), 'Memory preflight missing');
+          assert(html.includes('if(!hasColor&&!needsDetail)'), 'Fast upscale path missing');
           assert(html.includes("canvas.width=0;canvas.height=0"), 'Stale result reset missing');
           assert(html.includes('URL.revokeObjectURL(previewUrl)'), 'Preview cleanup missing');
           assert(html.includes("b.dataset.tab!=='up'"),'Upscale tab must remain independent');
