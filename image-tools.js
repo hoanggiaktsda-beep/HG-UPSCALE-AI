@@ -5,6 +5,15 @@
   const editor = el('selection'), pen = editor.getContext('2d');
   let mode = 'background', region = null, start = null, busy = false, version = 0;
   let sessionPromise;
+  const method=el('watermarkMethod');
+  const choice=el('watermarkChoice');
+  function autoRegion(){
+    // Conservative heuristic: visible corner mark only; no claim of actual AI detection.
+    const w=source.width,h=source.height;
+    const size=Math.max(12,Math.round(Math.min(w,h)*.065));
+    return {x:Math.max(1,w-size-Math.round(w*.012)),y:Math.max(1,h-size-Math.round(h*.012)),w:size,h:size};
+  }
+  method.onchange=()=>{region=null;paint();el('selectionHelp').textContent=method.value==='auto'?'Tự ước lượng vị trí dấu hiển thị ở góc dưới bên phải rồi vá vùng nhỏ. Chưa có mô hình AI nhận diện logo; hãy kiểm tra ảnh sau xử lý.':'Kéo khung nhỏ sát dấu cần xóa để vá thủ công.';};
   const status = text => { el('status').textContent = text; };
   function sync() {
     const enabled = !!source && !busy;
@@ -43,7 +52,7 @@
     return {x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))};
   }
   editor.addEventListener('pointerdown',e=>{
-    if(!source||busy||mode==='background')return;
+    if(!source||busy||mode==='background'||mode==='watermark'&&method.value==='auto')return;
     e.preventDefault();start=point(e);region=null;editor.setPointerCapture(e.pointerId);paint();
   });
   editor.addEventListener('pointermove',e=>{
@@ -54,11 +63,11 @@
   editor.addEventListener('pointerup',end); editor.addEventListener('pointercancel',end);
   el('aiClear').onclick=()=>{region=null;paint();};
   el('aiMode').onchange=()=>{
-    mode=el('aiMode').value;region=null;paint();
+    mode=el('aiMode').value;region=null;choice.classList.toggle('hidden',mode!=='watermark');paint();
     el('selectionHelp').textContent=mode==='background'
       ?'AI tự tách chủ thể chính. Chi tiết tóc, kính và chân ghế mảnh có thể cần chỉnh thêm.'
       :mode==='product'?'Kéo một khung bao quanh đúng một sản phẩm, chừa ít nền quanh mép. AI tách sản phẩm trong khung và xuất PNG trong suốt.'
-      :'Kéo một khung nhỏ sát dấu Gemini cần xóa. Thuật toán vá từ vùng lân cận, không tự phát hiện logo và không xử lý dấu nhúng SynthID.';
+       :method.value==='auto'?'Tự ước lượng vùng góc dưới bên phải; chưa có AI nhận diện logo.':'Kéo một khung nhỏ sát dấu Gemini cần xóa. Không xử lý dấu nhúng SynthID.';
   };
   function script(url) {
     return new Promise((resolve,reject)=>{
@@ -128,7 +137,7 @@
     let rect;
     try {
       if(source.width*source.height>24000000)throw Error('Hãy dùng ảnh dưới 24 triệu điểm ảnh để tránh hết bộ nhớ.');
-      rect=mode==='background'?{x:0,y:0,w:source.width,h:source.height}:cropRect();
+      rect=mode==='background'?{x:0,y:0,w:source.width,h:source.height}:mode==='watermark'&&method.value==='auto'?autoRegion():cropRect();
     } catch(e){status(e.message);return;}
     busy=true;sync();el('download').disabled=true;el('aiRun').textContent='ĐANG XỬ LÝ…';
     const current=version;
