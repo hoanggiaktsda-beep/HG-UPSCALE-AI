@@ -130,7 +130,9 @@
       const i=(y*r.w+x)*4;
       for(let c=0;c<4;c++)fill.data[i+c]=Math.round(ids.reduce((v,id,k)=>v+pd[id+c]*weights[k],0)/total);
     }
-    oc.putImageData(fill,r.x,r.y);return out;
+    oc.putImageData(fill,r.x,r.y);
+    if(out.width!==source.width||out.height!==source.height)throw Error('Quality Lock: kích thước ảnh thay đổi.');
+    return out;
   }
   el('aiRun').onclick=async()=>{
     if(busy||!source)return;
@@ -146,7 +148,8 @@
       if(current!==version)return;
       canvas.width=result.width;canvas.height=result.height;ctx.drawImage(result,0,0);
       el('format').value='image/png';el('download').disabled=false;
-      status('Hoàn thành: '+result.width+' × '+result.height+' px · '+(mode==='watermark'?'Đã vá vùng chọn; kiểm tra chi tiết nền trước khi tải.':'PNG trong suốt · Kiểm tra mép chủ thể trước khi tải.'));
+      status('Hoàn thành: '+result.width+' × '+result.height+' px · '+(mode==='watermark'?'Quality Lock: đúng độ phân giải gốc, chỉ thay đổi pixel trong vùng chọn, xuất PNG không mất dữ liệu. Chi tiết vùng bị che là nội suy, không thể bảo đảm khôi phục nguyên bản.':'PNG trong suốt · Kiểm tra mép chủ thể trước khi tải.'));
+      if(mode==='watermark')el('download').dataset.forcePng='true';else delete el('download').dataset.forcePng;
     } catch(e){status('Chưa xử lý được: '+e.message+' Ảnh gốc được giữ nguyên.');}
     finally{busy=false;sync();el('aiRun').textContent='XỬ LÝ ẢNH';}
   };
