@@ -8,13 +8,18 @@
   let donor=null,pickingDonor=false,lastRepair=null;
   const method=el('watermarkMethod');
   const choice=el('watermarkChoice');
+  function updateSimpleUI(){
+    el('aiClear').classList.toggle('hidden',mode!=='product'&&!(mode==='watermark'&&method.value==='manual'));
+    el('aiRun').textContent=mode==='watermark'?'XÓA LOGO GEMINI':'XỬ LÝ ẢNH';
+    if(mode==='watermark'&&method.value==='auto')el('selectionHelp').textContent='Tự động thử vá vùng góc dưới phải (chưa nhận diện logo thật). Kiểm tra khung vàng trước khi xử lý; nếu sai hãy chọn vùng thủ công.';
+  }
   function autoRegion(){
     // Conservative heuristic: visible corner mark only; no claim of actual AI detection.
     const w=source.width,h=source.height;
     const size=Math.max(12,Math.round(Math.min(w,h)*.065));
     return {x:Math.max(1,w-size-Math.round(w*.012)),y:Math.max(1,h-size-Math.round(h*.012)),w:size,h:size};
   }
-  method.onchange=()=>{region=null;donor=null;pickingDonor=false;paint();el('selectionHelp').textContent=method.value==='auto'?'Tự ước lượng vị trí dấu hiển thị ở góc dưới bên phải rồi vá vùng nhỏ. Chưa có mô hình AI nhận diện logo; hãy kiểm tra ảnh sau xử lý.':'Kéo khung nhỏ sát dấu cần xóa để vá thủ công.';};
+  method.onchange=()=>{region=null;donor=null;pickingDonor=false;paint();updateSimpleUI();el('selectionHelp').textContent=method.value==='auto'?'Tự ước lượng vị trí dấu hiển thị ở góc dưới bên phải rồi vá vùng nhỏ. Chưa có mô hình AI nhận diện logo; hãy kiểm tra ảnh sau xử lý.':'Kéo khung nhỏ sát dấu cần xóa để vá thủ công.';};
   const status = text => { el('status').textContent = text; };
   function sync() {
     const enabled = !!source && !busy;
@@ -46,7 +51,7 @@
       editor.width=Math.max(1,Math.round(source.width*s));
       editor.height=Math.max(1,Math.round(source.height*s));
     }
-    paint(); sync();
+    paint(); sync();updateSimpleUI();
   }
   el('file').addEventListener('change', () => {
     // Existing source loader is asynchronous; refresh after the preview is ready.
@@ -79,7 +84,7 @@
   editor.addEventListener('pointerup',end); editor.addEventListener('pointercancel',end);
   el('aiClear').onclick=()=>{region=null;donor=null;pickingDonor=false;paint();};
   el('aiMode').onchange=()=>{
-    mode=el('aiMode').value;region=null;donor=null;pickingDonor=false;choice.classList.toggle('hidden',mode!=='watermark');el('retouchExpert').classList.toggle('hidden',mode!=='watermark');el('qualityLock').classList.toggle('hidden',mode!=='watermark');paint();
+    mode=el('aiMode').value;region=null;donor=null;pickingDonor=false;choice.classList.toggle('hidden',mode!=='watermark');el('retouchExpert').classList.toggle('hidden',mode!=='watermark');el('qualityLock').classList.toggle('hidden',mode!=='watermark');paint();updateSimpleUI();
     el('selectionHelp').textContent=mode==='background'
       ?'AI tự tách chủ thể chính. Chi tiết tóc, kính và chân ghế mảnh có thể cần chỉnh thêm.'
       :mode==='product'?'Kéo một khung bao quanh đúng một sản phẩm, chừa ít nền quanh mép. AI tách sản phẩm trong khung và xuất PNG trong suốt.'
@@ -214,12 +219,12 @@
       status('Hoàn thành: '+result.width+' × '+result.height+' px · '+(mode==='watermark'?'Khóa chất lượng đạt: đúng độ phân giải, giữ nguyên ngoài vùng sửa, xuất PNG. Kiểm tra cặp ảnh vùng sửa bên dưới trước khi tải.':'PNG trong suốt · Kiểm tra mép chủ thể trước khi tải.'));
       if(mode==='watermark')el('download').dataset.forcePng='true';else delete el('download').dataset.forcePng;
     } catch(e){status('Chưa xử lý được: '+e.message+' Ảnh gốc được giữ nguyên.');}
-    finally{busy=false;sync();el('aiRun').textContent='XỬ LÝ ẢNH';}
+    finally{busy=false;sync();updateSimpleUI();}
   };
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
     el('imageTools').classList.toggle('hidden',b.dataset.tab!=='imageTools');
     if(b.dataset.tab==='imageTools'){el('up').classList.add('hidden');el('tools').classList.add('hidden');refresh();}
   }));
   el('qualityLock').classList.add('hidden');
-  sync();
+  sync();updateSimpleUI();
 })();
