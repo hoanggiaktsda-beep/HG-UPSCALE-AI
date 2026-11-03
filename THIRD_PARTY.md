@@ -7,6 +7,14 @@
 
 Các thành phần không bị sửa đổi. Giấy phép và thông báo bản quyền gốc được giữ trong các gói phân phối. Những kết nối tải thư viện có thể cung cấp địa chỉ IP và thông tin kết nối cho nhà cung cấp; không gửi nội dung ảnh.
 
+## Mẫu logo hiển thị
+
+Các bản đồ alpha 36-v2, 48, 96 và 96-20260520 được trích từ src/core/embeddedAlphaMaps.js của GargantuaX/gemini-watermark-remover, giấy phép MIT. Giữ thông báo bản quyền tại [licenses/gemini-templates-MIT.txt](licenses/gemini-templates-MIT.txt). Thuật toán nhận dạng, lựa chọn cường độ và giao diện tích hợp được viết riêng cho HG. Nguồn: https://github.com/GargantuaX/gemini-watermark-remover .
+
+Ba ảnh kiểm thử công khai trong gemini-fixtures.json lấy từ thư mục tests/fixtures của cùng dự án, kèm SHA của blob nguồn. Chúng phục vụ kiểm thử, không phải ảnh của người dùng. Giấy phép và ghi công nguồn được giữ cùng dự án.
+
 ## Giới hạn
 
-Tách nền là dự đoán mặt nạ của mô hình nhẹ, không bảo đảm giữ đủ tóc, kính, chi tiết mảnh hoặc vật thể cùng màu nền. Tách sản phẩm phân tích vùng chữ nhật do người dùng chọn, không tự nhận diện mọi vật thể trong căn phòng, không khôi phục phần bị che khuất. Chức năng xóa dấu không tự phát hiện Gemini và không xóa SynthID; bộ phục hồi có nội suy nền trơn và lấy mẫu kết cấu cục bộ. Phân tích điểm ảnh đề xuất phương pháp; mẫu được tự tìm hoặc người dùng chọn. Không có mô hình AI sinh ảnh phục hồi. Mẫu không phù hợp có thể gây lệch đường nét, lặp vân hoặc sai kết cấu.
+Chỉ xử lý logo Gemini hiển thị, không xử lý SynthID. Không phải mô hình AI nhận diện tổng quát. Chế độ tự động dò mẫu trong 640 px ở góc dưới phải; chọn vùng logo để tìm ở vị trí khác. Ảnh bị nén, đổi kích thước, logo khác mẫu hoặc nền trùng hình dấu có thể thất bại; kiểm tra trước/sau vẫn cần thiết. Công cụ chặn xuất khi mức nhận dạng thấp hoặc kiểm tra khử dấu không đạt. Không thể bảo đảm khôi phục chính xác mọi chi tiết bị che.
+
+Tách nền vẫn dùng mô hình nhẹ U²-NetP; mép tóc, kính và vật thể mảnh có thể sai. Tách sản phẩm chỉ phân tích vùng người dùng khoanh, không dựng lại phần bị che.

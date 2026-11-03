@@ -16,6 +16,9 @@ jobs:
           node --check image-tools.js
           node --check retouch-expert.js
           node retouch-expert.test.cjs
+          node --check gemini-logo.js
+          node --check gemini-logo-worker.js
+          node gemini-logo.test.cjs
       - name: Check inline JavaScript syntax and safety guards
         run: |
           node --input-type=module <<'NODE'

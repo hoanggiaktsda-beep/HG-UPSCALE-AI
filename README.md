@@ -1,41 +1,28 @@
-# HG UPSCALE AI · Chuyên gia phục hồi V2.1
+# HG UPSCALE AI V2.2
 
-Ứng dụng xử lý ảnh ngay trên thiết bị. Giữ phần Upscale, tách nền, tách sản phẩm và hai chế độ xóa dấu hiển thị.
+## Xóa logo Gemini
 
-## Chuyên gia phục hồi
+Tải ảnh, chọn **Công cụ AI → Xóa dấu Gemini → Tự động nhận dạng logo**, bấm **XÓA LOGO GEMINI**. Nếu dấu nằm ở vị trí khác, chọn **Chọn vùng logo** và kéo một khung bao quanh dấu.
 
-Trong **Công cụ AI → Xóa dấu Gemini**:
+Bản này thay hoàn toàn phương pháp vá màu/lấy mẫu kết cấu ở luồng watermark. Bộ xử lý tìm mẫu alpha của logo, hiệu chỉnh cường độ rồi tính ngược phép pha trộn lớp trắng. Chỉ những điểm có alpha hoạt động mới được chỉnh. Không xóa một ô chữ nhật bằng nội suy.
 
-1. Khoanh vùng dấu, hoặc dùng vùng góc phải ước lượng ở chế độ tự động.
-2. Bấm **Phân tích vùng sửa** để đo biến thiên màu và chi tiết biên.
-3. Giữ **Chuyên gia đề xuất**, chọn **Lấy mẫu giữ kết cấu**, hoặc **Nội suy nền trơn**.
-4. Khi cần, bấm **Chọn mẫu sạch** và chạm tâm một vùng có cùng vân, ánh sáng, hướng nét. Không chọn trùng vùng dấu.
-5. Xử lý; xem cặp ảnh phóng to trước/sau và báo cáo khóa chất lượng. Có thể hoàn tác về ảnh gốc.
+Chế độ tự động dò nhiều vị trí và cỡ mẫu trong 640 px góc dưới phải; không mặc định coi một ô cố định là logo. Nhận dạng không chắc, kiểm tra phần dấu còn lại không đạt hoặc tạo quá nhiều điểm bị cắt màu sẽ chặn xuất. Không báo đã xóa chỉ vì đã sửa vùng ảnh.
 
-Lấy mẫu kết cấu tìm một mảng sạch theo độ khớp biên, sao chép ở tỷ lệ 1:1 và chỉ bù màu hằng số ở mức nhỏ. Tùy chọn hòa mép chỉ tác động bên trong vùng sửa. Đây là thuật toán phân tích và sao chép cục bộ, không phải chuyên gia con người hay mô hình AI sinh ảnh.
+Giữ nguyên kích thước ảnh gốc, so sánh điểm ảnh ngoài vùng logo theo từng dải và xuất PNG. Chạy nhận dạng trong Web Worker để tránh khóa giao diện. Có so sánh phóng to và hoàn tác.
 
-## Khóa chất lượng
-
-- Giữ kích thước ảnh gốc khi sửa watermark; không thu nhỏ ảnh để xuất.
-- So sánh từng điểm ảnh ngoài vùng sửa với ảnh nguồn đã giải mã theo các dải nhỏ để giảm bộ nhớ. Phát hiện khác biệt sẽ chặn tải kết quả.
-- Xuất PNG; kiểm tra vùng sửa trước khi tải. Không hứa khôi phục chính xác phần chi tiết bị dấu che.
-- Không bảo toàn metadata, EXIF hay hồ sơ màu nhúng của tệp gốc. Khóa điểm ảnh được đánh giá trong không gian màu canvas của trình duyệt.
-- Chức năng tách sản phẩm vẫn xuất riêng vùng sản phẩm, vì vậy không áp dụng khóa kích thước toàn ảnh của watermark.
-
-## Kiểm chứng
-
-Chạy:
+## Kiểm thử
 
 ```sh
 node --check image-tools.js
-node --check retouch-expert.js
-node retouch-expert.test.cjs
+node --check gemini-logo.js
+node --check gemini-logo-worker.js
+node gemini-logo.test.cjs
 ```
 
-Kiểm thử họa tiết lặp có ảnh sạch làm chuẩn: lấy mẫu kết cấu khôi phục mẫu thử chính xác khi tắt hòa mép; nội suy nền trơn làm mất họa tiết. Đây là mẫu tổng hợp, không phải bằng chứng cho mọi ảnh thực tế.
+Kiểm thử tự động có ảnh chụp dấu thực từ dự án công khai: nền tối và mặt tủ gỗ, một ảnh không dấu để kiểm tra không sửa nhầm, bảo toàn điểm ảnh ngoài vùng và sai số lượng tử hóa của phép đảo alpha. Đã kiểm tra bằng mắt thêm mẫu vải có hoa văn. Nguồn và giấy phép nằm trong THIRD_PARTY.md.
 
-Đã kiểm tra trong Chrome: đề xuất phương pháp, lấy mẫu tự động và chọn tay, cảnh báo mẫu khớp thấp, hoàn tác, xuất PNG 4096 × 4096 px và không đổi pixel ngoài vùng sửa. Chưa kiểm thử trực tiếp Safari iPhone.
+## Phạm vi
 
-## Giới hạn
+Không xử lý SynthID. Không phải mô hình AI tổng quát. Một số biến thể hoặc ảnh đã nén/chỉnh sửa sẽ không được nhận dạng. Giảm tương quan mẫu sau xử lý là chỉ báo kỹ thuật, không bảo đảm sạch tuyệt đối bằng thị giác. Chưa có ảnh thất bại riêng của người dùng để đối chiếu và chưa thử trực tiếp Safari iPhone.
 
-Vùng tự động là ước lượng góc phải, chưa nhận diện logo. Vân không lặp, cạnh phối cảnh, tóc, da hoặc chi tiết độc nhất có thể không có mẫu sạch phù hợp; cần chọn mẫu thủ công và xem lại. Không xử lý SynthID. Tách nền sử dụng U²-NetP và cần tải mô hình ở lần đầu; xem [thành phần bên thứ ba](THIRD_PARTY.md).
+Khóa chất lượng so sánh điểm ảnh đã giải mã trong không gian màu canvas; không bảo toàn EXIF hay hồ sơ màu nhúng. Tách sản phẩm vẫn xuất riêng vùng chọn, không áp dụng khóa kích thước toàn ảnh của watermark.
