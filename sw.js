@@ -1,7 +1,7 @@
-const CACHE='hg-upscale-v2';
+const CACHE='hg-upscale-v4';
 self.addEventListener('install',event=>{
   self.skipWaiting();
-  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./','./index.html','./image-tools.js?v=2','./icon.svg','./manifest.webmanifest'])));
+  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./','./index.html','./retouch-expert.js?v=4','./image-tools.js?v=4','./icon.svg','./manifest.webmanifest'])));
 });
 self.addEventListener('activate',event=>{
   event.waitUntil(Promise.all([

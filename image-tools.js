@@ -5,6 +5,7 @@
   const editor = el('selection'), pen = editor.getContext('2d');
   let mode = 'background', region = null, start = null, busy = false, version = 0;
   let sessionPromise;
+  let donor=null,pickingDonor=false,lastRepair=null;
   const method=el('watermarkMethod');
   const choice=el('watermarkChoice');
   function autoRegion(){
@@ -13,19 +14,23 @@
     const size=Math.max(12,Math.round(Math.min(w,h)*.065));
     return {x:Math.max(1,w-size-Math.round(w*.012)),y:Math.max(1,h-size-Math.round(h*.012)),w:size,h:size};
   }
-  method.onchange=()=>{region=null;paint();el('selectionHelp').textContent=method.value==='auto'?'Tự ước lượng vị trí dấu hiển thị ở góc dưới bên phải rồi vá vùng nhỏ. Chưa có mô hình AI nhận diện logo; hãy kiểm tra ảnh sau xử lý.':'Kéo khung nhỏ sát dấu cần xóa để vá thủ công.';};
+  method.onchange=()=>{region=null;donor=null;pickingDonor=false;paint();el('selectionHelp').textContent=method.value==='auto'?'Tự ước lượng vị trí dấu hiển thị ở góc dưới bên phải rồi vá vùng nhỏ. Chưa có mô hình AI nhận diện logo; hãy kiểm tra ảnh sau xử lý.':'Kéo khung nhỏ sát dấu cần xóa để vá thủ công.';};
   const status = text => { el('status').textContent = text; };
   function sync() {
     const enabled = !!source && !busy;
     el('aiRun').disabled = !enabled;
     el('aiClear').disabled = !enabled;
+    el('expertAnalyze').disabled=!enabled;el('pickDonor').disabled=!enabled;
+    el('undoRetouch').disabled=busy;
     el('file').disabled = busy;
-    document.querySelectorAll('#up button,#tools button,#imageTools select').forEach(b => b.disabled = busy);
+    document.querySelectorAll('nav button,#up button,#tools button,#imageTools select').forEach(b => b.disabled = busy);
   }
   function paint() {
     pen.clearRect(0,0,editor.width,editor.height);
     if (!source) return;
     pen.drawImage(source,0,0,editor.width,editor.height);
+    if(mode==='watermark'&&method.value==='auto'){const a=autoRegion();pen.strokeStyle='#ffb947';pen.lineWidth=2;pen.strokeRect(a.x/source.width*editor.width,a.y/source.height*editor.height,a.w/source.width*editor.width,a.h/source.height*editor.height);}
+    if(donor){pen.strokeStyle='#69cfe7';pen.lineWidth=2;pen.strokeRect(donor.x/source.width*editor.width,donor.y/source.height*editor.height,donor.w/source.width*editor.width,donor.h/source.height*editor.height);}
     if(region) {
       const r=region;
       pen.fillStyle='rgba(200,165,104,.15)';
@@ -35,7 +40,7 @@
     }
   }
   function refresh() {
-    version++; region=null;
+    version++; region=null;donor=null;pickingDonor=false;lastRepair=null;el('retouchReview').classList.add('hidden');
     if(source) {
       const s=Math.min(1,1000/Math.max(source.width,source.height));
       editor.width=Math.max(1,Math.round(source.width*s));
@@ -52,8 +57,19 @@
     return {x:Math.max(0,Math.min(1,(e.clientX-r.left)/r.width)),y:Math.max(0,Math.min(1,(e.clientY-r.top)/r.height))};
   }
   editor.addEventListener('pointerdown',e=>{
-    if(!source||busy||mode==='background'||mode==='watermark'&&method.value==='auto')return;
-    e.preventDefault();start=point(e);region=null;editor.setPointerCapture(e.pointerId);paint();
+    if(!source||busy||mode==='background'||mode==='watermark'&&method.value==='auto'&&!pickingDonor)return;
+    e.preventDefault();
+    if(pickingDonor){
+      try{
+        const r=targetRect(),p=point(e);
+        donor={x:Math.round(p.x*source.width-r.w/2),y:Math.round(p.y*source.height-r.h/2),w:r.w,h:r.h};
+        pickingDonor=false;el('repairStrategy').value='texture';
+        el('expertAdvice').textContent='Đã chọn mẫu sạch. Bấm phân tích để kiểm tra độ khớp hoặc xử lý để xem kết quả.';
+        paint();
+      }catch(err){status(err.message);}
+      return;
+    }
+    start=point(e);region=null;donor=null;editor.setPointerCapture(e.pointerId);paint();
   });
   editor.addEventListener('pointermove',e=>{
     if(!start)return;
@@ -61,9 +77,9 @@
   });
   const end=()=>{start=null;};
   editor.addEventListener('pointerup',end); editor.addEventListener('pointercancel',end);
-  el('aiClear').onclick=()=>{region=null;paint();};
+  el('aiClear').onclick=()=>{region=null;donor=null;pickingDonor=false;paint();};
   el('aiMode').onchange=()=>{
-    mode=el('aiMode').value;region=null;choice.classList.toggle('hidden',mode!=='watermark');paint();
+    mode=el('aiMode').value;region=null;donor=null;pickingDonor=false;choice.classList.toggle('hidden',mode!=='watermark');el('retouchExpert').classList.toggle('hidden',mode!=='watermark');el('qualityLock').classList.toggle('hidden',mode!=='watermark');paint();
     el('selectionHelp').textContent=mode==='background'
       ?'AI tự tách chủ thể chính. Chi tiết tóc, kính và chân ghế mảnh có thể cần chỉnh thêm.'
       :mode==='product'?'Kéo một khung bao quanh đúng một sản phẩm, chừa ít nền quanh mép. AI tách sản phẩm trong khung và xuất PNG trong suốt.'
@@ -116,24 +132,71 @@
       tensor.dispose();Object.values(outputs).forEach(t=>t.dispose());
     }
   }
+  function targetRect(){return method.value==='auto'?autoRegion():cropRect();}
+  function contextFor(r){
+    const pad=Math.max(40,Math.min(700,Math.max(r.w,r.h)*4));
+    let x=Math.max(0,r.x-pad),y=Math.max(0,r.y-pad),right=Math.min(source.width,r.x+r.w+pad),bottom=Math.min(source.height,r.y+r.h+pad);
+    if(donor){x=Math.min(x,Math.max(0,donor.x-3));y=Math.min(y,Math.max(0,donor.y-3));right=Math.max(right,Math.min(source.width,donor.x+r.w+3));bottom=Math.max(bottom,Math.min(source.height,donor.y+r.h+3));}
+    if((right-x)*(bottom-y)>6000000)throw Error('Mẫu sạch quá xa vùng sửa. Hãy chọn vùng gần hơn để giảm bộ nhớ.');
+    const c=surface(right-x,bottom-y),cx=c.getContext('2d',{willReadFrequently:true});
+    cx.drawImage(source,x,y,c.width,c.height,0,0,c.width,c.height);
+    return {image:cx.getImageData(0,0,c.width,c.height),rect:{x:r.x-x,y:r.y-y,w:r.w,h:r.h},donor:donor?{x:donor.x-x,y:donor.y-y,w:r.w,h:r.h}:null,x,y};
+  }
+  function advice(report){
+    const a=report.report||report;
+    const selected=el('repairStrategy').value;
+    el('expertAdvice').textContent='Độ biến thiên nền: '+a.deviation.toFixed(1)+' · Chi tiết biên: '+a.edge.toFixed(1)+'\nĐề xuất: '+(a.suggestion==='texture'?'Lấy mẫu giữ kết cấu':'Nội suy nền trơn')+'.'+(a.risk==='high'?' Có nhiều đường nét; nên chọn mẫu sạch thủ công.':'')+(selected==='smooth'&&a.suggestion==='texture'?' Nội suy có thể làm mất vân trong vùng sửa.':'')+(a.match!==undefined&&a.match!==null?'\nĐộ khớp biên ước lượng: '+a.match+'/100. Đây không phải xác suất khôi phục đúng ảnh gốc.':'');
+  }
+  el('expertAnalyze').onclick=()=>{
+    try{if(!source)throw Error('Hãy chọn ảnh trước');const r=targetRect(),c=contextFor(r);advice(HGRetouch.analyze(c.image,c.rect));paint();}
+    catch(e){status(e.message);}
+  };
+  el('pickDonor').onclick=()=>{
+    try{targetRect();pickingDonor=true;el('expertAdvice').textContent='Chạm vào tâm vùng sạch có cùng vân, ánh sáng và hướng đường nét. Mẫu phải nằm ngoài vùng dấu.';}
+    catch(e){status(e.message);}
+  };
+  async function verifyOutside(result,r){
+    const out=result.getContext('2d',{willReadFrequently:true}),stripe=surface(source.width,128),sc=stripe.getContext('2d',{willReadFrequently:true});
+    let checked=0;
+    for(let y=0;y<source.height;y+=128){
+      const h=Math.min(128,source.height-y);
+      sc.clearRect(0,0,stripe.width,128);sc.drawImage(source,0,y,source.width,h,0,0,source.width,h);
+      const a=sc.getImageData(0,0,source.width,h).data,b=out.getImageData(0,y,source.width,h).data;
+      const q=HGRetouch.outsideDifference(a,b,source.width,h,{x:r.x,y:r.y-y,w:r.w,h:r.h});
+      if(q.changed)throw Error('Khóa chất lượng: phát hiện thay đổi ngoài vùng sửa. Kết quả bị chặn xuất.');
+      checked+=q.checked;
+      if(y%1024===0)await new Promise(resolve=>setTimeout(resolve,0));
+    }
+    return checked;
+  }
   async function repair(r) {
     if(r.w*r.h>source.width*source.height*.08)throw Error('Vùng chọn quá lớn. Hãy khoanh sát dấu hiển thị, dưới 8% diện tích ảnh.');
-    if(r.x<1||r.y<1||r.x+r.w>=source.width||r.y+r.h>=source.height)throw Error('Vùng chọn cần chừa ít nhất 1 px nền ở cả bốn phía.');
-    status('Đang vá vùng chọn từ màu nền xung quanh…');
+    status('Chuyên gia đang phân tích vùng sửa và tìm mẫu…');
+    await new Promise(resolve=>setTimeout(resolve,0));
+    const c=contextFor(r),output=HGRetouch.repair(c.image,c.rect,{strategy:el('repairStrategy').value,feather:+el('repairFeather').value,donor:c.donor});
+    advice(output);
     const out=surface(source.width,source.height),oc=out.getContext('2d',{willReadFrequently:true});
-    oc.drawImage(source,0,0);
-    const patch=oc.getImageData(r.x-1,r.y-1,r.w+2,r.h+2),pd=patch.data,pw=r.w+2;
-    const fill=oc.createImageData(r.w,r.h);
-    for(let y=0;y<r.h;y++)for(let x=0;x<r.w;x++){
-      const ids=[(x+1)*4,((r.h+1)*pw+x+1)*4,((y+1)*pw)*4,((y+1)*pw+r.w+1)*4];
-      const weights=[1/(y+1),1/(r.h-y),1/(x+1),1/(r.w-x)],total=weights.reduce((a,b)=>a+b,0);
-      const i=(y*r.w+x)*4;
-      for(let c=0;c<4;c++)fill.data[i+c]=Math.round(ids.reduce((v,id,k)=>v+pd[id+c]*weights[k],0)/total);
+    oc.drawImage(source,0,0);oc.putImageData(new ImageData(output.data,r.w,r.h),r.x,r.y);
+    if(out.width!==source.width||out.height!==source.height)throw Error('Khóa chất lượng: kích thước ảnh thay đổi.');
+    status('Đang kiểm tra điểm ảnh ngoài vùng sửa…');
+    const checked=await verifyOutside(out,r);
+    lastRepair={rect:r,report:output.report,checked};
+    for(const [id,image] of [['patchBefore',source],['patchAfter',out]]){
+      const view=el(id),pad=8,x=Math.max(0,r.x-pad),y=Math.max(0,r.y-pad);
+      view.width=Math.min(source.width-x,r.w+pad*2);view.height=Math.min(source.height-y,r.h+pad*2);
+      view.getContext('2d').drawImage(image,x,y,view.width,view.height,0,0,view.width,view.height);
     }
-    oc.putImageData(fill,r.x,r.y);
-    if(out.width!==source.width||out.height!==source.height)throw Error('Quality Lock: kích thước ảnh thay đổi.');
+    el('retouchQA').textContent='Kiểm tra đạt: '+source.width+' × '+source.height+' px · '+checked.toLocaleString('vi-VN')+' điểm ảnh ngoài vùng sửa giữ nguyên · PNG. Phương pháp: '+(output.report.strategy==='texture'?'lấy mẫu kết cấu':'nội suy nền trơn')+'.'+(output.report.match!==null&&output.report.match<60?' Độ khớp thấp; nên chọn lại mẫu sạch.':'')+' Chi tiết bị che không thể xác minh từ ảnh nguồn.';
+    el('retouchReview').classList.remove('hidden');
     return out;
   }
+  el('undoRetouch').onclick=()=>{
+    if(!source||busy)return;
+    canvas.width=source.width;canvas.height=source.height;ctx.drawImage(source,0,0);
+    el('download').dataset.forcePng='true';el('download').disabled=false;
+    el('retouchReview').classList.add('hidden');lastRepair=null;
+    status('Đã hoàn tác về ảnh gốc, đúng độ phân giải gốc.');
+  };
   el('aiRun').onclick=async()=>{
     if(busy||!source)return;
     let rect;
@@ -141,14 +204,14 @@
       if(source.width*source.height>24000000)throw Error('Hãy dùng ảnh dưới 24 triệu điểm ảnh để tránh hết bộ nhớ.');
       rect=mode==='background'?{x:0,y:0,w:source.width,h:source.height}:mode==='watermark'&&method.value==='auto'?autoRegion():cropRect();
     } catch(e){status(e.message);return;}
-    busy=true;sync();el('download').disabled=true;el('aiRun').textContent='ĐANG XỬ LÝ…';
+    busy=true;sync();el('retouchReview').classList.add('hidden');el('download').disabled=true;el('aiRun').textContent='ĐANG XỬ LÝ…';
     const current=version;
     try {
       const result=mode==='watermark'?await repair(rect):await cutout(rect);
       if(current!==version)return;
       canvas.width=result.width;canvas.height=result.height;ctx.drawImage(result,0,0);
       el('format').value='image/png';el('download').disabled=false;
-      status('Hoàn thành: '+result.width+' × '+result.height+' px · '+(mode==='watermark'?'Quality Lock: đúng độ phân giải gốc, chỉ thay đổi pixel trong vùng chọn, xuất PNG không mất dữ liệu. Chi tiết vùng bị che là nội suy, không thể bảo đảm khôi phục nguyên bản.':'PNG trong suốt · Kiểm tra mép chủ thể trước khi tải.'));
+      status('Hoàn thành: '+result.width+' × '+result.height+' px · '+(mode==='watermark'?'Khóa chất lượng đạt: đúng độ phân giải, giữ nguyên ngoài vùng sửa, xuất PNG. Kiểm tra cặp ảnh vùng sửa bên dưới trước khi tải.':'PNG trong suốt · Kiểm tra mép chủ thể trước khi tải.'));
       if(mode==='watermark')el('download').dataset.forcePng='true';else delete el('download').dataset.forcePng;
     } catch(e){status('Chưa xử lý được: '+e.message+' Ảnh gốc được giữ nguyên.');}
     finally{busy=false;sync();el('aiRun').textContent='XỬ LÝ ẢNH';}
@@ -157,5 +220,6 @@
     el('imageTools').classList.toggle('hidden',b.dataset.tab!=='imageTools');
     if(b.dataset.tab==='imageTools'){el('up').classList.add('hidden');el('tools').classList.add('hidden');refresh();}
   }));
+  el('qualityLock').classList.add('hidden');
   sync();
 })();

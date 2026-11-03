@@ -11,6 +11,11 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
+      - name: Check retouch syntax and texture preservation
+        run: |
+          node --check image-tools.js
+          node --check retouch-expert.js
+          node retouch-expert.test.cjs
       - name: Check inline JavaScript syntax and safety guards
         run: |
           node --input-type=module <<'NODE'
