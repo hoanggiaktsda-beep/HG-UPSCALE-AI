@@ -21,6 +21,28 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}
 @keyframes hgSpin{to{transform:rotate(360deg)}}
 @media(max-width:480px){#hgLaundry .laundry-stage{height:205px}#hgLaundry .washer{transform:scale(.9) rotateY(-17deg)}}
 @media(prefers-reduced-motion:reduce){#hgLaundry .door img{animation:none!important}#hgLaundry .washer{transition:none}}
+</style><style id="hg-laundry-motion-v2">
+#hgLaundry .laundry-stage{overflow:hidden;isolation:isolate}
+#hgLaundry .washer{z-index:2}
+#hgLaundry .door{transform-origin:12% 50%;transition:transform .65s cubic-bezier(.2,.8,.2,1);backface-visibility:hidden}
+#hgLaundry.is-loading .door,#hgLaundry.is-done .door{transform:perspective(400px) rotateY(-62deg)}
+#hgLaundry.is-processing .door{transform:rotateY(0)}
+#hgLaundry .door img{transition:opacity .3s,filter .4s}
+#hgLaundry .laundry-float{position:absolute;z-index:3;top:18px;left:50%;width:94px;height:94px;object-fit:contain;transform:translate(-50%,-145%) rotate(-12deg) scale(.8);opacity:0;pointer-events:none;filter:drop-shadow(0 8px 10px #0009)}
+#hgLaundry.is-loading .laundry-float{animation:hgFeed 1.25s ease-in-out both}
+#hgLaundry.is-done .laundry-float{animation:hgReveal .95s .3s ease-out both}
+#hgLaundry .laundry-bubbles{position:absolute;inset:0;z-index:4;pointer-events:none;opacity:0;background:radial-gradient(circle at 43% 57%,#b5e4d788 0 4px,transparent 6px),radial-gradient(circle at 57% 48%,#c9a568aa 0 5px,transparent 7px),radial-gradient(circle at 49% 72%,#ffffff99 0 3px,transparent 5px)}
+#hgLaundry.is-processing .laundry-bubbles{opacity:1;animation:hgBubbles 1.4s ease-in-out infinite alternate}
+#hgLaundry.is-processing .washer{animation:hgVibrate .2s linear infinite alternate}
+#hgLaundry.is-processing .door img{animation:hgSpin .9s linear infinite}
+#hgLaundry.is-done .washer{animation:hgDone .65s ease-out}
+#hgLaundry .laundry-stage[hidden]{display:none}
+@keyframes hgFeed{0%{opacity:0;transform:translate(-50%,-145%) rotate(-12deg) scale(.8)}30%{opacity:1}85%{opacity:1;transform:translate(-50%,60%) rotate(15deg) scale(.52)}100%{opacity:0;transform:translate(-50%,75%) scale(.25)}}
+@keyframes hgReveal{0%{opacity:0;transform:translate(-50%,70%) scale(.25)}40%{opacity:1}100%{opacity:1;transform:translate(-50%,-105%) rotate(8deg) scale(.9)}}
+@keyframes hgBubbles{to{transform:translateY(-16px);filter:hue-rotate(30deg)}}
+@keyframes hgVibrate{to{transform:rotateY(-17deg) rotateX(5deg) translateX(1px)}}
+@keyframes hgDone{50%{filter:brightness(1.4)}}
+@media(prefers-reduced-motion:reduce){#hgLaundry .laundry-float,#hgLaundry .washer,#hgLaundry .laundry-bubbles,#hgLaundry .door{animation:none!important;transition:none!important}}
 </style></head><body>
 <a class="hg-home-navigation" href="https://hoanggiaktsda-beep.github.io/hoanggia-studio/#home" aria-label="Trở về trang chủ HOANGGIA AI" title="Trang chủ HOANGGIA AI"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></a>
 <main><header><div class="hgbrand"><img class="hgmark" src="https://hoanggiaktsda-beep.github.io/hoanggia-studioai/assets/brand-mark.svg" alt="HOANGGIA AI"><div><div class="hgsub">HOANGGIA AI <span class="dot">/</span> GRAPHICS STUDIO</div><h1>HG <span>UPSCALE</span> AI</h1><small>CHUYÊN GIA ĐỒ HỌA · XỬ LÝ TRÊN THIẾT BỊ</small></div></div></header><nav><button class="active" data-tab="up">UPSCALE</button><button data-tab="tools">TIỆN ÍCH</button><button data-tab="imageTools">CÔNG CỤ AI</button></nav><div class="workspace"><section class="image-panel"><div class="panel-heading"><span>01 · ẢNH NGUỒN</span><span class="tiny">JPG · PNG · WEBP</span></div><label class="upload">⬆️ <b>CHỌN ẢNH TỪ THIẾT BỊ</b><input id="file" type="file" accept="image/png,image/jpeg,image/webp"></label><p id="info" class="hint">Ảnh được xử lý tại trình duyệt, không tải lên máy chủ.</p><img id="preview" class="hidden" alt="Ảnh gốc"></section><section id="up" class="control-panel"><div class="panel-heading"><span>02 · BẢNG ĐIỀU KHIỂN</span><span class="tiny">HG EXPERT</span></div><h3>NÂNG ĐỘ PHÂN GIẢI</h3><label>Hệ số <select id="factor"><option value="1">1× · Chỉnh sửa</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
@@ -85,17 +107,17 @@ if(!panel||!mode||!file||!run||!status||!result)return;
 const root=document.createElement('div');root.id='hgLaundry';
 root.innerHTML='<div class="laundry-title"><strong>HG · AI LAUNDRY 3D</strong><span>TRẢI NGHIỆM TÁCH NỀN</span></div><div class="laundry-stage"><div class="laundry-floor"></div><div class="washer"><div class="door"><img alt="Ảnh trong máy giặt 3D" hidden></div></div></div><p class="laundry-caption" role="status" aria-live="polite">Chọn ảnh để bắt đầu trải nghiệm tách nền.</p><div class="laundry-actions"><button type="button" id="hgLaundryFast">CHẾ ĐỘ NHANH</button><button type="button" id="hgLaundryStart" class="primary">BẮT ĐẦU TÁCH NỀN</button></div>';
 const heading=panel.querySelector('.panel-heading');heading?.insertAdjacentElement('afterend',root);
-const img=root.querySelector('img'),caption=root.querySelector('.laundry-caption'),start=root.querySelector('#hgLaundryStart'),fast=root.querySelector('#hgLaundryFast');
-let url=null,busy=false,quick=false;
+const stage=root.querySelector('.laundry-stage');stage.insertAdjacentHTML('beforeend','<img class="laundry-float" alt="" aria-hidden="true"><div class="laundry-bubbles" aria-hidden="true"></div>');const floating=root.querySelector('.laundry-float');const img=root.querySelector('img'),caption=root.querySelector('.laundry-caption'),start=root.querySelector('#hgLaundryStart'),fast=root.querySelector('#hgLaundryFast');
+let url=null,busy=false,quick=false,phaseTimer=null;
 function visible(){root.hidden=!['background','product'].includes(mode.value)}
-function state(s,message){root.classList.toggle('is-processing',s==='processing');root.classList.toggle('is-done',s==='done');caption.textContent=message}
-function reset(){busy=false;state('idle',file.files?.length?'Ảnh đã sẵn sàng. Nhấn BẮT ĐẦU TÁCH NỀN.':'Chọn ảnh để bắt đầu trải nghiệm tách nền.')}
-function syncFile(){if(url)URL.revokeObjectURL(url);url=null;img.hidden=true;if(file.files?.[0]){url=URL.createObjectURL(file.files[0]);img.src=url;img.hidden=false}reset()}
-function syncStatus(){if(!busy)return;const t=status.textContent||'';if(/lỗi|thất bại|không thể|không hỗ trợ|hãy chọn|chưa chọn|error|failed/i.test(t)){busy=false;state('idle',t);return}if(!run.disabled&&result.width>0&&result.height>0&&/đã|hoàn tất|thành công|xong|tách nền|xuất/i.test(t)){busy=false;state('done','Hoàn tất! Kiểm tra kết quả và tải PNG ở phần KẾT QUẢ.')}}
-start.addEventListener('click',()=>{if(!file.files?.length){state('idle','Vui lòng chọn ảnh nguồn trước.');file.focus();return}if(run.disabled){state('idle','Công cụ đang tải hoặc chưa sẵn sàng. Hãy kiểm tra thông báo.');return}busy=true;state('processing','Máy giặt AI đang xử lý ảnh…');run.click()});
+function state(s,message){for(const phase of ['loading','processing','done'])root.classList.toggle('is-'+phase,s===phase);caption.textContent=message}
+function reset(){clearTimeout(phaseTimer);busy=false;state('idle',file.files?.length?'Ảnh đã sẵn sàng. Nhấn BẮT ĐẦU TÁCH NỀN.':'Chọn ảnh để bắt đầu trải nghiệm tách nền.')}
+function syncFile(){if(url)URL.revokeObjectURL(url);url=null;img.hidden=true;if(file.files?.[0]){url=URL.createObjectURL(file.files[0]);img.src=url;floating.src=url;img.hidden=false}reset()}
+function syncStatus(){if(!busy)return;const t=status.textContent||'';if(/lỗi|thất bại|không thể|không hỗ trợ|hãy chọn|chưa chọn|error|failed/i.test(t)){busy=false;state('idle',t);return}if(!run.disabled&&result.width>0&&result.height>0&&/hoàn thành|đã xử lý|hoàn tất|thành công/i.test(t)){busy=false;floating.src=result.toDataURL('image/png');state('done','Hoàn tất! Ảnh đã tách nền đang được lấy ra khỏi máy. Tải PNG ở phần KẾT QUẢ.')}}
+start.addEventListener('click',()=>{if(!file.files?.length){state('idle','Vui lòng chọn ảnh nguồn trước.');file.focus();return}if(run.disabled){state('idle','Công cụ đang tải hoặc chưa sẵn sàng. Hãy kiểm tra thông báo.');return}busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250);run.click()});
 fast.addEventListener('click',()=>{quick=!quick;root.querySelector('.laundry-stage').hidden=quick;fast.textContent=quick?'BẬT TRẢI NGHIỆM 3D':'CHẾ ĐỘ NHANH'});
 file.addEventListener('change',syncFile);mode.addEventListener('change',visible);
-new MutationObserver(syncStatus).observe(status,{childList:true,characterData:true,subtree:true});run.addEventListener('click',()=>{if(!busy){busy=true;state('processing','Đang xử lý ảnh…')}});
+new MutationObserver(syncStatus).observe(status,{childList:true,characterData:true,subtree:true});run.addEventListener('click',()=>{if(!busy){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}});
 window.addEventListener('pagehide',()=>{if(url)URL.revokeObjectURL(url)},{once:true});visible();syncFile();
 })();
 </script></body></html>
