@@ -43,6 +43,10 @@ html{-webkit-text-size-adjust:100%;text-size-adjust:100%}body{overflow-x:hidden}
 @keyframes hgVibrate{to{transform:rotateY(-17deg) rotateX(5deg) translateX(1px)}}
 @keyframes hgDone{50%{filter:brightness(1.4)}}
 @media(prefers-reduced-motion:reduce){#hgLaundry .laundry-float,#hgLaundry .washer,#hgLaundry .laundry-bubbles,#hgLaundry .door{animation:none!important;transition:none!important}}
+</style><style id="hg-webgl-viewport-fix">
+#hgLaundry.real3d .laundry-stage{display:block!important;position:relative!important;width:100%!important;height:360px!important;min-height:300px!important;overflow:hidden!important;perspective:none!important}
+#hgLaundry.real3d .laundry-stage canvas.hg-webgl{position:absolute!important;inset:0!important;display:block!important;width:100%!important;height:100%!important;max-width:none!important;min-width:0!important;max-height:none!important;margin:0!important;padding:0!important;object-fit:fill!important;transform:none!important;border-radius:8px!important}
+@media(max-width:480px){#hgLaundry.real3d .laundry-stage{height:300px!important;min-height:300px!important}}
 </style></head><body>
 <a class="hg-home-navigation" href="https://hoanggiaktsda-beep.github.io/hoanggia-studio/#home" aria-label="Trở về trang chủ HOANGGIA AI" title="Trang chủ HOANGGIA AI"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1z"/></svg></a>
 <main><header><div class="hgbrand"><img class="hgmark" src="https://hoanggiaktsda-beep.github.io/hoanggia-studioai/assets/brand-mark.svg" alt="HOANGGIA AI"><div><div class="hgsub">HOANGGIA AI <span class="dot">/</span> GRAPHICS STUDIO</div><h1>HG <span>UPSCALE</span> AI</h1><small>CHUYÊN GIA ĐỒ HỌA · XỬ LÝ TRÊN THIẾT BỊ</small></div></div></header><nav><button class="active" data-tab="up">UPSCALE</button><button data-tab="tools">TIỆN ÍCH</button><button data-tab="imageTools">CÔNG CỤ AI</button></nav><div class="workspace"><section class="image-panel"><div class="panel-heading"><span>01 · ẢNH NGUỒN</span><span class="tiny">JPG · PNG · WEBP</span></div><label class="upload">⬆️ <b>CHỌN ẢNH TỪ THIẾT BỊ</b><input id="file" type="file" accept="image/png,image/jpeg,image/webp"></label><p id="info" class="hint">Ảnh được xử lý tại trình duyệt, không tải lên máy chủ.</p><img id="preview" class="hidden" alt="Ảnh gốc"></section><section id="up" class="control-panel"><div class="panel-heading"><span>02 · BẢNG ĐIỀU KHIỂN</span><span class="tiny">HG EXPERT</span></div><h3>NÂNG ĐỘ PHÂN GIẢI</h3><label>Hệ số <select id="factor"><option value="1">1× · Chỉnh sửa</option><option value="2">2×</option><option value="3">3×</option><option value="4">4×</option></select></label>
@@ -137,7 +141,7 @@ let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,pow
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.className='hg-webgl';renderer.domElement.setAttribute('aria-label','Mô hình máy giặt 3D tương tác, kéo ngang để xoay góc nhìn');
 stage.appendChild(renderer.domElement);root.classList.add('real3d');root.dataset.engine='webgl';
 const note=document.createElement('p');note.className='hg-3d-note';note.textContent='Kéo ngang để xoay máy · 3D WebGL miễn phí · AI vẫn xử lý trên thiết bị';stage.insertAdjacentElement('afterend',note);
-const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(4,2.6,7.5);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(3.1,2.05,6.2);camera.lookAt(0,0,0);
 scene.add(new THREE.HemisphereLight(0xd9e8e8,0x303a32,2.3));const key=new THREE.DirectionalLight(0xffe6b8,3.2);key.position.set(-3,6,5);scene.add(key);
 const machine=new THREE.Group();scene.add(machine);
 const mat=(color,metalness=0,roughness=.5)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
@@ -164,7 +168,7 @@ root.querySelector('#hgLaundryFast').addEventListener('click',()=>{quick=!quick}
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});
 renderer.domElement.addEventListener('pointermove',e=>{if(drag){targetYaw+=(e.clientX-lastX)*.007;lastX=e.clientX}});
 renderer.domElement.addEventListener('pointerup',()=>drag=false);renderer.domElement.addEventListener('pointercancel',()=>drag=false);
-function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(w&&h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}}
+function resize(){const box=stage.getBoundingClientRect(),w=Math.round(box.width),h=Math.round(box.height);if(w>0&&h>0){renderer.setSize(w,h,false);renderer.domElement.style.width=w+'px';renderer.domElement.style.height=h+'px';camera.aspect=w/h;camera.lookAt(0,0,0);camera.updateProjectionMatrix()}}
 const observer=new ResizeObserver(resize);observer.observe(stage);resize();
 let active=true;document.addEventListener('visibilitychange',()=>{active=!document.hidden});
 function animate(){requestAnimationFrame(animate);if(!active||stage.hidden||root.hidden)return;frame++;yaw+=(targetYaw-yaw)*.09;machine.rotation.y=yaw;
