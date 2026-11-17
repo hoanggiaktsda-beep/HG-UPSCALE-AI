@@ -132,10 +132,10 @@ window.addEventListener('pagehide',()=>{if(url)URL.revokeObjectURL(url)},{once:t
 (async()=>{
 const root=document.getElementById('hgLaundry');if(!root)return;
 const stage=root.querySelector('.laundry-stage'),file=document.getElementById('file'),result=document.getElementById('result'),mode=document.getElementById('aiMode');
-let THREE;try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js')}catch(e){root.querySelector('.laundry-caption').textContent='Không tải được môi trường 3D; chế độ tách nền thông thường vẫn sử dụng được.';return}
+let THREE;try{THREE=await import('./three.module.js?v=1')}catch(e){try{THREE=await import('https://esm.sh/three@0.169.0')}catch(err){root.querySelector('.laundry-caption').textContent='Không tải được Three.js. Vui lòng kiểm tra mạng hoặc thử trình duyệt khác.';console.error('HG 3D engine unavailable',e,err);return}}
 let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});}catch(e){return}
 renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.className='hg-webgl';renderer.domElement.setAttribute('aria-label','Mô hình máy giặt 3D tương tác, kéo ngang để xoay góc nhìn');
-stage.appendChild(renderer.domElement);root.classList.add('real3d');
+stage.appendChild(renderer.domElement);root.classList.add('real3d');root.dataset.engine='webgl';
 const note=document.createElement('p');note.className='hg-3d-note';note.textContent='Kéo ngang để xoay máy · 3D WebGL miễn phí · AI vẫn xử lý trên thiết bị';stage.insertAdjacentElement('afterend',note);
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(4,2.6,7.5);
 scene.add(new THREE.HemisphereLight(0xd9e8e8,0x303a32,2.3));const key=new THREE.DirectionalLight(0xffe6b8,3.2);key.position.set(-3,6,5);scene.add(key);
