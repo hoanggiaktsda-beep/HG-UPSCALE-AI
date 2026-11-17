@@ -150,7 +150,7 @@ function cube(parent,w,h,d,x,y,z,m){const o=new THREE.Mesh(new THREE.BoxGeometry
 function torus(parent,r,t,x,y,z,m){const o=new THREE.Mesh(new THREE.TorusGeometry(r,t,18,72),m);o.position.set(x,y,z);parent.add(o);return o}
 cube(machine,2.5,2.9,2.15,0,0,0,ivory);cube(machine,2.38,.45,2.18,0,1.18,.01,dark);
 cube(machine,.92,.055,.025,-.54,1.2,1.105,gold);for(let i=0;i<3;i++){const dial=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.07,28),gold);dial.rotation.x=Math.PI/2;dial.position.set(.35+i*.35,1.19,1.12);machine.add(dial)}
-const drum=new THREE.Group();drum.position.set(0,-.28,.99);machine.add(drum);
+const drum=new THREE.Group();drum.position.set(0,-.28,1.27);machine.add(drum);
 const steel=mat(0xa7b5b4,.84,.29),steelDark=mat(0x657574,.78,.38),seal=mat(0x151b1c,.2,.83);
 const tub=new THREE.Mesh(new THREE.CylinderGeometry(.75,.75,.88,80,1,true),new THREE.MeshStandardMaterial({color:0x98a9a8,metalness:.85,roughness:.33,side:THREE.DoubleSide}));tub.rotation.x=Math.PI/2;tub.position.z=-.38;drum.add(tub);
 const back=new THREE.Mesh(new THREE.CircleGeometry(.75,80),steel);back.position.z=-.82;drum.add(back);
@@ -162,7 +162,7 @@ const holeCount=12*58;const holes=new THREE.InstancedMesh(holeGeo,holeMat,holeCo
 for(let z=0;z<12;z++)for(let j=0;j<58;j++){const a=j*Math.PI*2/58+(z%2)*.04;dummy.position.set(Math.sin(a)*.751,Math.cos(a)*.751,-.76+z*.068);dummy.rotation.set(0,0,0);dummy.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1),new THREE.Vector3(Math.sin(a),Math.cos(a),0));dummy.updateMatrix();holes.setMatrixAt(hi++,dummy.matrix)}holes.instanceMatrix.needsUpdate=true;drum.add(holes);
 const rearHoles=new THREE.InstancedMesh(new THREE.CircleGeometry(.016,8),holeMat,6*40);hi=0;
 for(let ring=1;ring<=6;ring++)for(let j=0;j<40;j++){const a=j*Math.PI*2/40;dummy.position.set(Math.cos(a)*ring*.1,Math.sin(a)*ring*.1,-.8);dummy.quaternion.identity();dummy.updateMatrix();rearHoles.setMatrixAt(hi++,dummy.matrix)}rearHoles.instanceMatrix.needsUpdate=true;drum.add(rearHoles);
-torus(machine,.86,.1,0,-.28,1.105,seal);
+torus(machine,.86,.1,0,-.28,1.115,seal);
 const hinge=new THREE.Group();hinge.position.set(-.9,-.28,1.14);machine.add(hinge);
 torus(hinge,.9,.105,.9,0,.06,ivory);torus(hinge,.73,.035,.9,0,.095,gold);
 const pane=new THREE.Mesh(new THREE.CircleGeometry(.74,64),glass);pane.position.set(.9,0,.06);hinge.add(pane);
