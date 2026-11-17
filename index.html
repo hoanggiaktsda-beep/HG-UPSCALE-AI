@@ -120,4 +120,59 @@ file.addEventListener('change',syncFile);mode.addEventListener('change',visible)
 document.addEventListener('hg:cutout',e=>{const d=e.detail||{};if(d.phase==='start'){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');clearTimeout(phaseTimer);phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}else if(d.phase==='success'){clearTimeout(phaseTimer);busy=false;try{floating.src=result.toDataURL('image/png')}catch(_){floating.src=url||''}state('done','Hoàn tất! Ảnh trong suốt đã được lấy ra khỏi máy.')}else if(d.phase==='error'){clearTimeout(phaseTimer);busy=false;state('idle',d.message||'Xử lý không thành công.')}});run.addEventListener('click',()=>{if(!busy){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}});
 window.addEventListener('pagehide',()=>{if(url)URL.revokeObjectURL(url)},{once:true});visible();syncFile();
 })();
+</script><style id="hg-real-3d-style">
+#hgLaundry.real3d .laundry-stage{height:310px;touch-action:pan-y;cursor:grab}
+#hgLaundry.real3d .laundry-stage:active{cursor:grabbing}
+#hgLaundry.real3d .laundry-stage>.washer,#hgLaundry.real3d .laundry-stage>.laundry-floor,#hgLaundry.real3d .laundry-stage>.laundry-float,#hgLaundry.real3d .laundry-stage>.laundry-bubbles{display:none!important}
+#hgLaundry .hg-webgl{width:100%;height:100%;display:block;max-width:none;border-radius:8px}
+#hgLaundry .hg-3d-note{font-size:10px;text-align:center;color:#9fa9a3;margin:5px 0 0}
+@media(max-width:480px){#hgLaundry.real3d .laundry-stage{height:265px}}
+</style>
+<script type="module" id="hg-real-3d-engine">
+(async()=>{
+const root=document.getElementById('hgLaundry');if(!root)return;
+const stage=root.querySelector('.laundry-stage'),file=document.getElementById('file'),result=document.getElementById('result'),mode=document.getElementById('aiMode');
+let THREE;try{THREE=await import('https://cdn.jsdelivr.net/npm/three@0.169.0/build/three.module.js')}catch(e){root.querySelector('.laundry-caption').textContent='Không tải được môi trường 3D; chế độ tách nền thông thường vẫn sử dụng được.';return}
+let renderer;try{renderer=new THREE.WebGLRenderer({antialias:true,alpha:true,powerPreference:'low-power'});}catch(e){return}
+renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.75));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.domElement.className='hg-webgl';renderer.domElement.setAttribute('aria-label','Mô hình máy giặt 3D tương tác, kéo ngang để xoay góc nhìn');
+stage.appendChild(renderer.domElement);root.classList.add('real3d');
+const note=document.createElement('p');note.className='hg-3d-note';note.textContent='Kéo ngang để xoay máy · 3D WebGL miễn phí · AI vẫn xử lý trên thiết bị';stage.insertAdjacentElement('afterend',note);
+const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(35,1,.1,100);camera.position.set(4,2.6,7.5);
+scene.add(new THREE.HemisphereLight(0xd9e8e8,0x303a32,2.3));const key=new THREE.DirectionalLight(0xffe6b8,3.2);key.position.set(-3,6,5);scene.add(key);
+const machine=new THREE.Group();scene.add(machine);
+const mat=(color,metalness=0,roughness=.5)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
+const ivory=mat(0xd8d7ca,.55,.3),dark=mat(0x1b292b,.35,.35),gold=mat(0xc9a568,.75,.27),glass=new THREE.MeshPhysicalMaterial({color:0x678b91,metalness:.25,roughness:.18,transparent:true,opacity:.42,side:THREE.DoubleSide});
+function cube(parent,w,h,d,x,y,z,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);parent.add(o);return o}
+function torus(parent,r,t,x,y,z,m){const o=new THREE.Mesh(new THREE.TorusGeometry(r,t,18,72),m);o.position.set(x,y,z);parent.add(o);return o}
+cube(machine,2.5,2.9,2.15,0,0,0,ivory);cube(machine,2.38,.45,2.18,0,1.18,.01,dark);
+cube(machine,.92,.055,.025,-.54,1.2,1.105,gold);for(let i=0;i<3;i++){const dial=new THREE.Mesh(new THREE.CylinderGeometry(.09,.09,.07,28),gold);dial.rotation.x=Math.PI/2;dial.position.set(.35+i*.35,1.19,1.12);machine.add(dial)}
+const drum=new THREE.Group();drum.position.set(0,-.28,1.09);machine.add(drum);
+const inner=new THREE.Mesh(new THREE.CylinderGeometry(.78,.78,.15,64,1,true),dark);inner.rotation.x=Math.PI/2;drum.add(inner);
+for(let i=0;i<8;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.045,.11,.025),gold);const a=i*Math.PI/4;p.position.set(Math.sin(a)*.67,Math.cos(a)*.67,.13);p.rotation.z=-a;drum.add(p)}
+const hinge=new THREE.Group();hinge.position.set(-.9,-.28,1.14);machine.add(hinge);
+torus(hinge,.9,.105,.9,0,.06,ivory);torus(hinge,.73,.035,.9,0,.095,gold);
+const pane=new THREE.Mesh(new THREE.CircleGeometry(.74,64),glass);pane.position.set(.9,0,.06);hinge.add(pane);
+cube(machine,.19,.18,.18,-1.12,-1.22,1.04,dark);cube(machine,.19,.18,.18,1.12,-1.22,1.04,dark);
+const card=new THREE.Mesh(new THREE.PlaneGeometry(.93,.93),new THREE.MeshBasicMaterial({color:0xf6f0e7,side:THREE.DoubleSide,transparent:true}));card.position.set(0,-.28,1.36);machine.add(card);
+const floor=new THREE.Mesh(new THREE.CircleGeometry(2.35,64),new THREE.MeshBasicMaterial({color:0x4d5447,transparent:true,opacity:.12}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.62;scene.add(floor);
+let texture=null,phase='idle',yaw=-.26,targetYaw=-.26,drag=false,lastX=0,quick=false,frame=0;
+function setTexture(url){if(!url)return;new THREE.TextureLoader().load(url,t=>{if(texture)texture.dispose();texture=t;t.colorSpace=THREE.SRGBColorSpace;card.material.map=t;card.material.color.set(0xffffff);card.material.needsUpdate=true},undefined,()=>{})}
+file.addEventListener('change',()=>{const f=file.files?.[0];if(!f)return;const u=URL.createObjectURL(f);setTexture(u);setTimeout(()=>URL.revokeObjectURL(u),15000);phase='idle'});
+document.addEventListener('hg:cutout',e=>{const d=e.detail||{};if(d.phase==='start'){phase='loading';frame=0}else if(d.phase==='success'){phase='done';frame=0;try{setTexture(result.toDataURL('image/png'))}catch(_){}}else if(d.phase==='error'){phase='error';frame=0}});
+root.querySelector('#hgLaundryFast').addEventListener('click',()=>{quick=!quick});
+renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});
+renderer.domElement.addEventListener('pointermove',e=>{if(drag){targetYaw+=(e.clientX-lastX)*.007;lastX=e.clientX}});
+renderer.domElement.addEventListener('pointerup',()=>drag=false);renderer.domElement.addEventListener('pointercancel',()=>drag=false);
+function resize(){const w=stage.clientWidth,h=stage.clientHeight;if(w&&h){renderer.setSize(w,h,false);camera.aspect=w/h;camera.updateProjectionMatrix()}}
+const observer=new ResizeObserver(resize);observer.observe(stage);resize();
+let active=true;document.addEventListener('visibilitychange',()=>{active=!document.hidden});
+function animate(){requestAnimationFrame(animate);if(!active||stage.hidden||root.hidden)return;frame++;yaw+=(targetYaw-yaw)*.09;machine.rotation.y=yaw;
+const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+if(!quick&&!reduced){if(phase==='loading'){hinge.rotation.y=-1.25;card.position.y=-.28+Math.max(0,1-frame/70)*2;card.scale.setScalar(.85);if(frame>65)phase='processing'}
+else if(phase==='processing'){hinge.rotation.y+=(0-hinge.rotation.y)*.1;drum.rotation.z+=.095;card.rotation.z+=.095;machine.position.x=Math.sin(frame*.7)*.012}
+else if(phase==='done'){hinge.rotation.y+=(-1.3-hinge.rotation.y)*.1;card.position.y+= (1.48-card.position.y)*.065;card.rotation.z*=.9;machine.position.x=0}
+else{hinge.rotation.y+=(-.45-hinge.rotation.y)*.08;card.position.y+=(-.28-card.position.y)*.06;card.rotation.z*=.9;machine.position.x=0}}
+renderer.render(scene,camera)}
+animate();
+})();
 </script></body></html>
