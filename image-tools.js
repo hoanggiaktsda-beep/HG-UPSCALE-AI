@@ -78,16 +78,32 @@
     const input=surface(320,320),ic=input.getContext('2d',{willReadFrequently:true});
     ic.drawImage(source,rect.x,rect.y,rect.w,rect.h,0,0,320,320);
     const pixels=ic.getImageData(0,0,320,320).data;
-    let max=1;for(let i=0;i<pixels.length;i+=4)max=Math.max(max,pixels[i],pixels[i+1],pixels[i+2]);
+    // U2NETP preprocessing: normalize RGB against the image-wide maximum,
+    // then apply ImageNet mean/std. Avoid scaling dark inputs to an unstable
+    // near-zero denominator, and ignore transparent RGB padding.
+    let max=0;for(let i=0;i<pixels.length;i+=4){
+      if(pixels[i+3]===0)continue;
+      max=Math.max(max,pixels[i],pixels[i+1],pixels[i+2]);
+    }
+    max=Math.max(1,max);
     const n=320*320,data=new Float32Array(n*3),mean=[.485,.456,.406],sd=[.229,.224,.225];
-    for(let i=0;i<n;i++)for(let c=0;c<3;c++)data[c*n+i]=(pixels[i*4+c]/max-mean[c])/sd[c];
+    for(let i=0;i<n;i++)for(let c=0;c<3;c++)data[c*n+i]=((pixels[i*4+c]*pixels[i*4+3]/255)/max-mean[c])/sd[c];
     const tensor=new ort.Tensor('float32',data,[1,3,320,320]);
     const outputs=await sess.run({[sess.inputNames[0]]:tensor});
     try {
       const output=outputs[sess.outputNames[0]].data;
-      let lo=Infinity,hi=-Infinity;for(let i=0;i<n;i++){lo=Math.min(lo,output[i]);hi=Math.max(hi,output[i]);}
+      // Use robust mask percentiles: isolated extreme activations should not
+      // collapse the useful alpha range of the entire subject.
+      const sorted=Float32Array.from(output).sort();
+      const lo=sorted[Math.floor((n-1)*.002)],hi=sorted[Math.floor((n-1)*.998)];
+      const range=Math.max(1e-7,hi-lo);
       const mask=surface(320,320),mc=mask.getContext('2d'),mi=mc.createImageData(320,320);
-      for(let i=0;i<n;i++){mi.data[i*4]=mi.data[i*4+1]=mi.data[i*4+2]=255;mi.data[i*4+3]=hi>lo?Math.round(255*(output[i]-lo)/(hi-lo)):0;}
+      for(let i=0;i<n;i++){
+        const v=Math.max(0,Math.min(1,(output[i]-lo)/range));
+        // Keep soft transitions for hair and semi-transparent edges.
+        mi.data[i*4]=mi.data[i*4+1]=mi.data[i*4+2]=255;
+        mi.data[i*4+3]=Math.round(v*255);
+      }
       mc.putImageData(mi,0,0);
       const result=surface(rect.w,rect.h),rc=result.getContext('2d');
       rc.drawImage(source,rect.x,rect.y,rect.w,rect.h,0,0,rect.w,rect.h);
