@@ -1,4 +1,4 @@
-const CACHE='hg-upscale-v6';
+const CACHE='hg-upscale-v7';
 self.addEventListener('install',event=>{
   self.skipWaiting();
   event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(['./','./index.html','./gemini-logo.js?v=6','./gemini-logo-worker.js?v=6','./gemini-masks.json?v=6','./image-tools.js?v=6','./icon.svg','./manifest.webmanifest'])));
