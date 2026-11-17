@@ -76,7 +76,7 @@ function filter(type){draw(1,rotation);if(type==='rotate'){rotation=(rotation+90
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>run(()=>filter(b.dataset.action)));
 $('convert').onclick=()=>run(()=>draw(1,rotation));
 $('download').onclick=()=>{const type=$('download').dataset.forcePng==='true'?'image/png':$('format').value||'image/png';canvas.toBlob(blob=>{if(!blob){$('status').textContent='Không thể xuất ảnh';return}const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='HG-upscale.'+(type==='image/jpeg'?'jpg':type.split('/')[1]);a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)},type,.95)};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script><script src="./gemini-logo.js?v=6"></script><script src="./image-tools.js?v=6"></script><script id="hg-preset-controller">
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script><script src="./gemini-logo.js?v=6"></script><script src="./image-tools.js?v=7"></script><script id="hg-preset-controller">
 (function(){
   "use strict";
   const presets={
@@ -117,7 +117,7 @@ function syncStatus(){if(!busy)return;const t=status.textContent||'';if(/lỗi|t
 start.addEventListener('click',()=>{if(!file.files?.length){state('idle','Vui lòng chọn ảnh nguồn trước.');file.focus();return}if(run.disabled){state('idle','Công cụ đang tải hoặc chưa sẵn sàng. Hãy kiểm tra thông báo.');return}busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250);run.click()});
 fast.addEventListener('click',()=>{quick=!quick;root.querySelector('.laundry-stage').hidden=quick;fast.textContent=quick?'BẬT TRẢI NGHIỆM 3D':'CHẾ ĐỘ NHANH'});
 file.addEventListener('change',syncFile);mode.addEventListener('change',visible);
-new MutationObserver(syncStatus).observe(status,{childList:true,characterData:true,subtree:true});run.addEventListener('click',()=>{if(!busy){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}});
+document.addEventListener('hg:cutout',e=>{const d=e.detail||{};if(d.phase==='start'){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');clearTimeout(phaseTimer);phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}else if(d.phase==='success'){clearTimeout(phaseTimer);busy=false;try{floating.src=result.toDataURL('image/png')}catch(_){floating.src=url||''}state('done','Hoàn tất! Ảnh trong suốt đã được lấy ra khỏi máy.')}else if(d.phase==='error'){clearTimeout(phaseTimer);busy=false;state('idle',d.message||'Xử lý không thành công.')}});run.addEventListener('click',()=>{if(!busy){busy=true;state('loading','Đang đưa ảnh vào máy giặt AI…');phaseTimer=setTimeout(()=>{if(busy)state('processing','Lồng giặt đang quay · AI đang tách nền…')},1250)}});
 window.addEventListener('pagehide',()=>{if(url)URL.revokeObjectURL(url)},{once:true});visible();syncFile();
 })();
 </script></body></html>
