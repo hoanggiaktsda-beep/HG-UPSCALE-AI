@@ -146,30 +146,43 @@ scene.add(new THREE.HemisphereLight(0xd9e8e8,0x303a32,2.3));const key=new THREE.
 const machine=new THREE.Group();scene.add(machine);
 const mat=(color,metalness=0,roughness=.5)=>new THREE.MeshStandardMaterial({color,metalness,roughness});
 
-const ivory=mat(0xd5d7d3,.18,.31),dark=mat(0x171e22,.35,.34),gold=mat(0x9a8c72,.58,.3),glass=new THREE.MeshPhysicalMaterial({color:0x7d9ca7,metalness:0,roughness:.08,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false});
+const ivory=mat(0x55585e,.72,.29),dark=mat(0x090a0d,.38,.22),gold=mat(0x8c9199,.88,.19),glass=new THREE.MeshPhysicalMaterial({color:0x7d9ca7,metalness:0,roughness:.08,transparent:true,opacity:.18,side:THREE.DoubleSide,depthWrite:false});
 function cube(parent,w,h,d,x,y,z,m){const o=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);o.position.set(x,y,z);parent.add(o);return o}
 function torus(parent,r,t,x,y,z,m){const o=new THREE.Mesh(new THREE.TorusGeometry(r,t,18,72),m);o.position.set(x,y,z);parent.add(o);return o}
-const edge=mat(0x89918f,.35,.44),steel=mat(0xa4b5b7,.85,.23),steelDark=mat(0x657b80,.7,.37),seal=mat(0x171d1e,.1,.87);
+const edge=mat(0x8a8e94,.8,.24),steel=mat(0xb8bdc6,.9,.18),steelDark=mat(0x58616b,.82,.26),seal=mat(0x111215,.15,.68);
 // Hollow sheet-metal cabinet: no solid block behind the circular drum opening.
 cube(machine,2.48,2.9,.07,0,0,-1.025,ivory);
 cube(machine,.07,2.9,2.02,-1.205,0,-.055,ivory);
 cube(machine,.07,2.9,2.02,1.205,0,-.055,ivory);
 cube(machine,2.48,.07,2.02,0,1.415,-.055,ivory);
 cube(machine,2.48,.07,2.02,0,-1.415,-.055,ivory);
-cube(machine,2.49,.49,2.04,0,1.2,-.045,ivory);
+cube(machine,2.49,.49,2.04,0,1.2,-.045,dark);
 cube(machine,2.46,.018,2.04,0,1.455,-.045,edge);
 cube(machine,2.47,.03,2.03,0,-1.43,-.04,edge);
 cube(machine,.025,2.8,2.02,-1.22,-.01,-.04,edge);
 cube(machine,.025,2.8,2.02,1.22,-.01,-.04,edge);
 const faceShape=new THREE.Shape();faceShape.moveTo(-1.19,-1.39);faceShape.lineTo(1.19,-1.39);faceShape.lineTo(1.19,.93);faceShape.lineTo(-1.19,.93);faceShape.closePath();
-const cut=new THREE.Path();cut.absarc(0,-.23,.89,0,Math.PI*2,true);faceShape.holes.push(cut);
-const face=new THREE.Mesh(new THREE.ShapeGeometry(faceShape,64),ivory);face.position.z=1.005;machine.add(face);
-cube(machine,2.37,.42,.045,0,1.2,1.04,dark);
-cube(machine,.66,.14,.015,-.72,1.22,1.07,steelDark);
-cube(machine,.52,.16,.025,.64,1.22,1.08,mat(0x1e343b,.15,.27));
-const dial=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.09,48),steel);dial.rotation.x=Math.PI/2;dial.position.set(.02,1.21,1.1);machine.add(dial);
-torus(machine,.165,.017,.02,1.21,1.155,dark);
-for(let i=0;i<3;i++){const led=new THREE.Mesh(new THREE.CircleGeometry(.017,12),gold);led.position.set(.45+i*.13,1.19,1.102);machine.add(led)}
+const cut=new THREE.Path();cut.absarc(0,-.23,.91,0,Math.PI*2,true);faceShape.holes.push(cut);
+const face=new THREE.Mesh(new THREE.ShapeGeometry(faceShape,96),ivory);face.position.z=1.005;machine.add(face);
+cube(machine,2.39,.46,.055,0,1.2,1.04,dark);
+const drawer=cube(machine,.78,.33,.035,-.77,1.23,1.084,mat(0x17191c,.42,.23));
+cube(machine,.57,.035,.035,-.77,1.11,1.108,mat(0x08090a,.15,.2));
+const display=cube(machine,.62,.29,.022,.77,1.22,1.087,mat(0x05070a,.2,.11));
+const dial=new THREE.Mesh(new THREE.CylinderGeometry(.165,.165,.10,64),steel);dial.rotation.x=Math.PI/2;dial.position.set(.06,1.22,1.11);machine.add(dial);
+torus(machine,.169,.014,.06,1.22,1.165,edge);
+function textPlane(value,w,h,x,y,z,size=42,color='#e3e7eb',align='center'){
+ const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;const ctx=canvas.getContext('2d');ctx.clearRect(0,0,512,128);ctx.fillStyle=color;ctx.font='500 '+size+'px Arial,sans-serif';ctx.textAlign=align;ctx.textBaseline='middle';ctx.fillText(value,align==='left'?12:256,64);
+ const tex=new THREE.CanvasTexture(canvas);tex.colorSpace=THREE.SRGBColorSpace;
+ const mesh=new THREE.Mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshBasicMaterial({map:tex,transparent:true,depthWrite:false}));mesh.position.set(x,y,z);machine.add(mesh);return mesh
+}
+textPlane('HOANGGIA AI',.66,.16,-.77,1.32,1.11,43);
+textPlane('AI Wash   Quick Wash',.55,.11,.30,1.38,1.095,27,'#d0d2d4','left');
+textPlane('Cotton   Delicates',.55,.11,.30,1.29,1.095,25,'#bfc4c7','left');
+textPlane('1:25',.37,.18,.77,1.25,1.11,66);
+textPlane('◉    ◈    ◉',.46,.08,.77,1.14,1.11,28);
+const power=new THREE.Mesh(new THREE.RingGeometry(.048,.061,32),steel);power.position.set(1.105,1.23,1.105);machine.add(power);
+const servicePanel=cube(machine,.55,.43,.015,.79,-1.05,1.02,ivory);
+const serviceBorder=new THREE.LineSegments(new THREE.EdgesGeometry(new THREE.BoxGeometry(.55,.43,.017)),new THREE.LineBasicMaterial({color:0x30343b}));serviceBorder.position.copy(servicePanel.position);machine.add(serviceBorder);
 const drum=new THREE.Group();drum.position.set(0,-.23,.99);machine.add(drum);
 const tub=new THREE.Mesh(new THREE.CylinderGeometry(.76,.76,.79,96,1,true),new THREE.MeshStandardMaterial({color:0x91a4a7,metalness:.82,roughness:.29,side:THREE.DoubleSide}));tub.rotation.x=Math.PI/2;tub.position.z=-.37;drum.add(tub);
 const back=new THREE.Mesh(new THREE.CircleGeometry(.75,96),steelDark);back.position.z=-.77;drum.add(back);
@@ -181,13 +194,13 @@ for(let z=0;z<12;z++)for(let j=0;j<56;j++){const angle=j*Math.PI*2/56+(z%2)*.045
 const rearHoles=new THREE.InstancedMesh(new THREE.CircleGeometry(.014,8),holeMat,6*40);hi=0;
 for(let ring=1;ring<=6;ring++)for(let j=0;j<40;j++){const angle=j*Math.PI*2/40;dummy.position.set(Math.cos(angle)*ring*.1,Math.sin(angle)*ring*.1,-.762);dummy.quaternion.identity();dummy.updateMatrix();rearHoles.setMatrixAt(hi++,dummy.matrix)}rearHoles.instanceMatrix.needsUpdate=true;drum.add(rearHoles);
 
-torus(machine,.89,.085,0,-.23,1.045,seal);
-torus(machine,.91,.023,0,-.23,1.11,steelDark);
+torus(machine,1.015,.13,0,-.23,1.045,dark);torus(machine,.92,.055,0,-.23,1.10,seal);
+torus(machine,.99,.018,0,-.23,1.11,steel);
 const hinge=new THREE.Group();hinge.position.set(-.94,-.23,1.13);machine.add(hinge);
-torus(hinge,.94,.078,.94,0,.035,steel);torus(hinge,.79,.03,.94,0,.085,dark);
+torus(hinge,1.015,.105,.94,0,.035,dark);torus(hinge,.93,.025,.94,0,.105,steel);torus(hinge,.80,.024,.94,0,.085,steelDark);
 const pane=new THREE.Mesh(new THREE.SphereGeometry(.76,64,32,0,Math.PI*2,0,Math.PI*.49),glass);pane.rotation.x=Math.PI;pane.scale.z=.23;pane.position.set(.94,0,.065);hinge.add(pane);
-const handle=cube(hinge,.085,.28,.07,1.81,0,.10,steelDark);
-cube(machine,.14,.12,.18,-1.03,-1.35,.87,dark);cube(machine,.14,.12,.18,1.03,-1.35,.87,dark);
+const handle=cube(hinge,.055,.22,.045,1.90,0,.10,dark);
+cube(machine,.13,.08,.14,-1.02,-1.47,.85,dark);cube(machine,.13,.08,.14,1.02,-1.47,.85,dark);
 const card=new THREE.Mesh(new THREE.PlaneGeometry(.77,.77),new THREE.MeshBasicMaterial({color:0xffffff,side:THREE.DoubleSide,transparent:true}));card.position.set(0,-.23,.98);card.visible=false;machine.add(card);
 const floor=new THREE.Mesh(new THREE.CircleGeometry(2.35,64),new THREE.MeshBasicMaterial({color:0x4d5447,transparent:true,opacity:.12}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.62;scene.add(floor);
 let texture=null,phase='idle',yaw=-.26,targetYaw=-.26,drag=false,lastX=0,quick=false,frame=0,spinUntil=0,spinStarted=0,pendingResult=null,previewMode=false;
