@@ -80,7 +80,7 @@ function filter(type){draw(1,rotation);if(type==='rotate'){rotation=(rotation+90
 document.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>run(()=>filter(b.dataset.action)));
 $('convert').onclick=()=>run(()=>draw(1,rotation));
 $('download').onclick=()=>{const type=$('download').dataset.forcePng==='true'?'image/png':$('format').value||'image/png';canvas.toBlob(blob=>{if(!blob){$('status').textContent='Không thể xuất ảnh';return}const a=document.createElement('a'),u=URL.createObjectURL(blob);a.href=u;a.download='HG-upscale.'+(type==='image/jpeg'?'jpg':type.split('/')[1]);a.click();setTimeout(()=>URL.revokeObjectURL(u),30000)},type,.95)};
-if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script><script src="./gemini-logo.js?v=6"></script><script src="./image-tools.js?v=7"></script><script id="hg-preset-controller">
+if('serviceWorker' in navigator)window.addEventListener('load',()=>navigator.serviceWorker.register('./sw.js').catch(()=>{}));</script><script src="./gemini-logo.js?v=6"></script><script src="./image-tools.js?v=8"></script><script id="hg-preset-controller">
 (function(){
   "use strict";
   const presets={
