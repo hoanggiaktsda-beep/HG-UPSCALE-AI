@@ -153,17 +153,20 @@ cube(machine,.92,.055,.025,-.54,1.2,1.105,gold);for(let i=0;i<3;i++){const dial=
 const drum=new THREE.Group();drum.position.set(0,-.28,1.09);machine.add(drum);
 const inner=new THREE.Mesh(new THREE.CylinderGeometry(.78,.78,.15,64,1,true),dark);inner.rotation.x=Math.PI/2;drum.add(inner);
 for(let i=0;i<8;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.045,.11,.025),gold);const a=i*Math.PI/4;p.position.set(Math.sin(a)*.67,Math.cos(a)*.67,.13);p.rotation.z=-a;drum.add(p)}
+const spinDisc=new THREE.Group();spinDisc.position.set(0,-.28,1.24);machine.add(spinDisc);const disc=new THREE.Mesh(new THREE.CircleGeometry(.69,64),mat(0x263738,.3,.5));spinDisc.add(disc);for(let i=0;i<5;i++){const a=i*Math.PI*2/5;const vane=cube(spinDisc,.12,.43,.045,Math.sin(a)*.37,Math.cos(a)*.37,.035,gold);vane.rotation.z=-a}torus(spinDisc,.69,.045,0,0,.05,gold);
 const hinge=new THREE.Group();hinge.position.set(-.9,-.28,1.14);machine.add(hinge);
 torus(hinge,.9,.105,.9,0,.06,ivory);torus(hinge,.73,.035,.9,0,.095,gold);
 const pane=new THREE.Mesh(new THREE.CircleGeometry(.74,64),glass);pane.position.set(.9,0,.06);hinge.add(pane);
 cube(machine,.19,.18,.18,-1.12,-1.22,1.04,dark);cube(machine,.19,.18,.18,1.12,-1.22,1.04,dark);
 const card=new THREE.Mesh(new THREE.PlaneGeometry(.93,.93),new THREE.MeshBasicMaterial({color:0xf6f0e7,side:THREE.DoubleSide,transparent:true}));card.position.set(0,-.28,1.36);machine.add(card);
 const floor=new THREE.Mesh(new THREE.CircleGeometry(2.35,64),new THREE.MeshBasicMaterial({color:0x4d5447,transparent:true,opacity:.12}));floor.rotation.x=-Math.PI/2;floor.position.y=-1.62;scene.add(floor);
-let texture=null,phase='idle',yaw=-.26,targetYaw=-.26,drag=false,lastX=0,quick=false,frame=0;
+let texture=null,phase='idle',yaw=-.26,targetYaw=-.26,drag=false,lastX=0,quick=false,frame=0,spinUntil=0,spinStarted=0,pendingResult=null,previewMode=false;
 function setTexture(url){if(!url)return;new THREE.TextureLoader().load(url,t=>{if(texture)texture.dispose();texture=t;t.colorSpace=THREE.SRGBColorSpace;card.material.map=t;card.material.color.set(0xffffff);card.material.needsUpdate=true},undefined,()=>{})}
 if(file.files?.[0]){const u=URL.createObjectURL(file.files[0]);setTexture(u);setTimeout(()=>URL.revokeObjectURL(u),15000)}
 file.addEventListener('change',()=>{const f=file.files?.[0];if(!f)return;const u=URL.createObjectURL(f);setTexture(u);setTimeout(()=>URL.revokeObjectURL(u),15000);phase='idle'});
-document.addEventListener('hg:cutout',e=>{const d=e.detail||{};if(d.phase==='start'){phase='loading';frame=0}else if(d.phase==='success'){phase='done';frame=0;try{setTexture(result.toDataURL('image/png'))}catch(_){}}else if(d.phase==='error'){phase='error';frame=0}});
+document.addEventListener('hg:cutout',e=>{const d=e.detail||{};if(d.phase==='start'){previewMode=false;pendingResult=null;phase='processing';frame=0;spinStarted=performance.now();spinUntil=spinStarted+2400}else if(d.phase==='success'){try{pendingResult=result.toDataURL('image/png')}catch(_){pendingResult=null}spinUntil=Math.max(spinUntil,performance.now()+450);phase='finishing'}else if(d.phase==='error'){spinUntil=0;phase='error';frame=0}});
+const demo=document.createElement('button');demo.type='button';demo.id='hgLaundryDemo';demo.textContent='XEM MÁY QUAY 3D';demo.title='Chạy thử hoạt cảnh 3D, không xử lý ảnh';root.querySelector('.laundry-actions').prepend(demo);
+demo.addEventListener('click',()=>{previewMode=true;pendingResult=null;phase='processing';spinStarted=performance.now();spinUntil=spinStarted+4200;frame=0;root.querySelector('.laundry-caption').textContent='Đang chạy thử chuyển động lồng giặt 3D (không xử lý ảnh)…'});
 root.querySelector('#hgLaundryFast').addEventListener('click',()=>{quick=!quick});
 renderer.domElement.addEventListener('pointerdown',e=>{drag=true;lastX=e.clientX;renderer.domElement.setPointerCapture(e.pointerId)});
 renderer.domElement.addEventListener('pointermove',e=>{if(drag){targetYaw+=(e.clientX-lastX)*.007;lastX=e.clientX}});
@@ -174,7 +177,7 @@ let active=true;document.addEventListener('visibilitychange',()=>{active=!docume
 function animate(){requestAnimationFrame(animate);if(!active||stage.hidden||root.hidden)return;frame++;yaw+=(targetYaw-yaw)*.09;machine.rotation.y=yaw;
 const reduced=window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 if(!quick&&!reduced){if(phase==='loading'){hinge.rotation.y=-1.25;card.position.y=-.28+Math.max(0,1-frame/70)*2;card.scale.setScalar(.85);if(frame>65){card.position.y=-.28;hinge.rotation.y=0}}
-else if(phase==='processing'){hinge.rotation.y+=(0-hinge.rotation.y)*.1;drum.rotation.z+=.095;card.rotation.z+=.095;machine.position.x=Math.sin(frame*.7)*.012}
+else if(phase==='processing'||phase==='finishing'){hinge.rotation.y+=(0-hinge.rotation.y)*.12;drum.rotation.z+=.11;spinDisc.rotation.z+=.11;card.rotation.z+=.11;machine.position.x=Math.sin(frame*.7)*.014;if(phase==='finishing'&&performance.now()>=spinUntil){phase='done';frame=0;if(pendingResult){setTexture(pendingResult);pendingResult=null}}else if(previewMode&&performance.now()>=spinUntil){phase='idle';previewMode=false;root.querySelector('.laundry-caption').textContent='Đã xem xong hoạt cảnh. Chọn ảnh để tách nền AI.'}}
 else if(phase==='done'){hinge.rotation.y+=(-1.3-hinge.rotation.y)*.1;card.position.y+= (1.48-card.position.y)*.065;card.rotation.z*=.9;machine.position.x=0}
 else{hinge.rotation.y+=(-.45-hinge.rotation.y)*.08;card.position.y+=(-.28-card.position.y)*.06;card.rotation.z*=.9;machine.position.x=0}}
 renderer.render(scene,camera)}
