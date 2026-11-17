@@ -5,6 +5,7 @@
   const method=el('watermarkMethod');
   let mode='background',region=null,start=null,busy=false,version=0,sessionPromise,masksPromise;
   const status=text=>{el('status').textContent=text;};
+  const lifecycle=(phase,detail='')=>document.dispatchEvent(new CustomEvent('hg:cutout',{detail:{phase,message:detail,mode}}));
   function sync(){
     const enabled=!!source&&!busy;
     el('aiRun').disabled=!enabled;el('aiClear').disabled=!enabled;el('file').disabled=busy;
@@ -160,7 +161,7 @@
   el('aiRun').onclick=async()=>{
     if(!source||busy)return;
     if(source.width*source.height>24000000){status('Hãy dùng ảnh dưới 24 triệu điểm ảnh để tránh hết bộ nhớ.');return;}
-    busy=true;sync();el('retouchReview').classList.add('hidden');el('download').disabled=true;canvas.width=0;canvas.height=0;
+    busy=true;if(mode!=='watermark')lifecycle('start');sync();el('retouchReview').classList.add('hidden');el('download').disabled=true;canvas.width=0;canvas.height=0;
     el('aiRun').textContent='ĐANG XỬ LÝ…';const current=version;
     try{
       const result=mode==='watermark'?await removeLogo():await cutout(mode==='background'?{x:0,y:0,w:source.width,h:source.height}:cropRect());
@@ -168,8 +169,9 @@
       canvas.width=result.width;canvas.height=result.height;ctx.drawImage(result,0,0);
       el('format').value='image/png';el('download').disabled=false;
       if(mode==='watermark')el('download').dataset.forcePng='true';else delete el('download').dataset.forcePng;
+      if(mode!=='watermark')lifecycle('success');
       status(mode==='watermark'?'Đã xử lý logo theo mẫu · Đúng độ phân giải gốc · Kiểm tra ảnh phóng to trước khi tải PNG.':'Hoàn thành: '+result.width+' × '+result.height+' px · PNG trong suốt.');
-    }catch(e){el('retouchReview').classList.add('hidden');status(e.message);}
+    }catch(e){if(mode!=='watermark')lifecycle('error',e.message);el('retouchReview').classList.add('hidden');status(e.message);}
     finally{busy=false;sync();update();}
   };
   document.querySelectorAll('[data-tab]').forEach(b=>b.addEventListener('click',()=>{
