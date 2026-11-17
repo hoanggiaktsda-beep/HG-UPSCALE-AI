@@ -181,47 +181,48 @@ for(let z=0;z<12;z++)for(let j=0;j<56;j++){const angle=j*Math.PI*2/56+(z%2)*.045
 const rearHoles=new THREE.InstancedMesh(new THREE.CircleGeometry(.014,8),holeMat,6*40);hi=0;
 for(let ring=1;ring<=6;ring++)for(let j=0;j<40;j++){const angle=j*Math.PI*2/40;dummy.position.set(Math.cos(angle)*ring*.1,Math.sin(angle)*ring*.1,-.762);dummy.quaternion.identity();dummy.updateMatrix();rearHoles.setMatrixAt(hi++,dummy.matrix)}rearHoles.instanceMatrix.needsUpdate=true;drum.add(rearHoles);
 
-// Lightweight inertial water: free surface follows gravity, not the rotating drum.
+// Curved water volume in the circular drum aperture, not a rectangular plane.
 const waterGroup=new THREE.Group();waterGroup.position.set(0,-.23,0);machine.add(waterGroup);
-const waterMaterial=new THREE.MeshPhysicalMaterial({color:0x4b9fb4,metalness:0,roughness:.21,transparent:true,opacity:.43,depthWrite:false,side:THREE.DoubleSide});
-const waterSurfaceMaterial=new THREE.MeshPhysicalMaterial({color:0x8bd6e1,metalness:0,roughness:.12,transparent:true,opacity:.66,depthWrite:false,side:THREE.DoubleSide});
-const waterSurfaceGeometry=new THREE.PlaneGeometry(1.27,.74,22,10);
-const waterSurface=new THREE.Mesh(waterSurfaceGeometry,waterSurfaceMaterial);
-waterSurface.rotation.x=-Math.PI/2;waterSurface.position.set(0,-.47,.58);waterGroup.add(waterSurface);
-const waterSide=new THREE.Mesh(new THREE.CylinderGeometry(.72,.72,.27,56,1,true,0,Math.PI),waterMaterial);
-waterSide.rotation.x=Math.PI/2;waterSide.position.set(0,-.56,.55);waterGroup.add(waterSide);
-const baseSurfacePositions=waterSurfaceGeometry.attributes.position.array.slice();
-const foamMaterial=new THREE.MeshBasicMaterial({color:0xe7f9fa,transparent:true,opacity:.72,depthWrite:false});
-const foamGeometry=new THREE.SphereGeometry(.017,7,5);
-const bubbles=[];
-for(let i=0;i<26;i++){
- const bubble=new THREE.Mesh(foamGeometry,foamMaterial);
- const angle=i*2.399963, radius=.11+(i%8)*.065;
- bubble.userData={x:Math.cos(angle)*radius,z:.54+Math.sin(angle)*.28,seed:i*1.37,scale:.55+(i%5)*.23};
- bubble.scale.setScalar(bubble.userData.scale);
- waterGroup.add(bubble);bubbles.push(bubble);
-}
+const waterMaterial=new THREE.MeshPhysicalMaterial({color:0x4c9eac,metalness:0,roughness:.24,transparent:true,opacity:.42,depthWrite:false,side:THREE.DoubleSide});
+const foamMaterial=new THREE.MeshBasicMaterial({color:0xe5f4ef,transparent:true,opacity:.56,depthWrite:false});
+const waterGeometry=new THREE.BufferGeometry(),waterSegments=48;
+const waterPositions=new Float32Array((waterSegments+1)*2*3);
+const waterIndices=[];
+for(let i=0;i<waterSegments;i++){const j=i*2;waterIndices.push(j,j+1,j+2,j+1,j+3,j+2)}
+waterGeometry.setAttribute('position',new THREE.BufferAttribute(waterPositions,3));waterGeometry.setIndex(waterIndices);
+const waterFace=new THREE.Mesh(waterGeometry,waterMaterial);waterFace.position.z=.94;waterGroup.add(waterFace);
+const foamGeometry=new THREE.BufferGeometry(),foamPositions=new Float32Array((waterSegments+1)*3);
+foamGeometry.setAttribute('position',new THREE.BufferAttribute(foamPositions,3));
+const foamLine=new THREE.Line(foamGeometry,new THREE.LineBasicMaterial({color:0xe0f6ef,transparent:true,opacity:.6}));foamLine.position.z=.945;waterGroup.add(foamLine);
+const bubbleGeo=new THREE.SphereGeometry(.012,6,5),bubbles=[];
+for(let i=0;i<14;i++){const mesh=new THREE.Mesh(bubbleGeo,foamMaterial);mesh.userData={x:-.55+i*.083,seed:i*1.91};mesh.scale.setScalar(.6+(i%4)*.34);mesh.position.z=.95;waterGroup.add(mesh);bubbles.push(mesh)}
 waterGroup.visible=false;
-let waterTilt=0,waterTiltVelocity=0,waterLevel=-.47;
+let waterTilt=0,waterTiltVelocity=0,waterLevel=-.46;
 function updateWater(dt,time,spinSpeed,visible){
  waterGroup.visible=visible;if(!visible)return;
- const targetTilt=Math.max(-.14,Math.min(.14,-spinSpeed*.024));
- const acceleration=(targetTilt-waterTilt)*13-waterTiltVelocity*6.5;
- waterTiltVelocity+=acceleration*dt;waterTilt+=waterTiltVelocity*dt;
- waterLevel+=(-.47-waterLevel)*Math.min(1,dt*3);
- waterSurface.rotation.z=waterTilt;
- waterSurface.position.y=waterLevel;
- const positions=waterSurfaceGeometry.attributes.position;
- for(let i=0;i<positions.count;i++){
-  const x=baseSurfacePositions[i*3],y=baseSurfacePositions[i*3+1];
-  const wave=.018*Math.sin(x*9-time*5.5)+.012*Math.sin(y*11+time*4.1)+.007*Math.sin((x+y)*17-time*7);
-  positions.setZ(i,wave);
+ const targetTilt=Math.max(-.12,Math.min(.12,-spinSpeed*.018));
+ waterTiltVelocity+=((targetTilt-waterTilt)*10-waterTiltVelocity*5.5)*dt;
+ waterTilt+=waterTiltVelocity*dt;
+ waterLevel+=(-.46-waterLevel)*Math.min(1,dt*3);
+ const radius=.73;
+ for(let i=0;i<=waterSegments;i++){
+  const x=-radius+2*radius*i/waterSegments;
+  const bottom=-Math.sqrt(Math.max(0,radius*radius-x*x));
+  const wave=.015*Math.sin(x*10-time*4.1)+.009*Math.sin(x*17+time*5.3);
+  const surface=waterLevel+waterTilt*x+wave;
+  const top=Math.max(bottom,Math.min(radius,surface));
+  const p=i*6;waterPositions[p]=x;waterPositions[p+1]=bottom;waterPositions[p+2]=0;
+  waterPositions[p+3]=x;waterPositions[p+4]=top;waterPositions[p+5]=0;
+  foamPositions[i*3]=x;foamPositions[i*3+1]=top+.006;foamPositions[i*3+2]=0;
  }
- positions.needsUpdate=true;
- waterSide.position.y=-.57+Math.sin(time*2.1)*.006;
+ waterGeometry.attributes.position.needsUpdate=true;
+ foamGeometry.attributes.position.needsUpdate=true;
  for(const bubble of bubbles){
-  const p=bubble.userData;
-  bubble.position.set(p.x+Math.sin(time*.85+p.seed)*.025,waterLevel+.012+Math.sin(time*1.7+p.seed)*.017,p.z+Math.cos(time*.7+p.seed)*.018);
+  const x=bubble.userData.x,seed=bubble.userData.seed;
+  const bottom=-Math.sqrt(Math.max(0,radius*radius-x*x));
+  const top=Math.max(bottom,waterLevel+waterTilt*x+.015*Math.sin(x*10-time*4.1)+.009*Math.sin(x*17+time*5.3));
+  bubble.position.x=x+Math.sin(time*.7+seed)*.012;
+  bubble.position.y=top-.012-Math.abs(Math.sin(time*.9+seed))*.023;
  }
 }
 torus(machine,.89,.085,0,-.23,1.045,seal);
